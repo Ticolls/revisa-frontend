@@ -1,0 +1,307 @@
+"use client"
+
+import { useState, useEffect, useMemo } from "react"
+import { useRouter } from "next/navigation"
+import { authService, adminService, type Report } from "@/lib/api"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import { CheckCircle, XCircle, Search, X } from "lucide-react"
+import { toast } from "sonner"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
+
+const ITEMS_PER_PAGE = 10
+
+export default function AdminReportsPage() {
+  const router = useRouter()
+  const [loading, setLoading] = useState(true)
+  const [reports, setReports] = useState<Report[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "resolved" | "rejected">("all")
+
+  useEffect(() => {
+    const user = authService.getCurrentUser()
+    if (!user || !user.isAdmin) {
+      router.push("/login")
+      return
+    }
+
+    loadReports()
+    setLoading(false)
+  }, [router])
+
+  const loadReports = async () => {
+    try {
+      const response = await adminService.getReports({ page: 1, limit: 100 })
+      setReports(response.data)
+    } catch (error) {
+      toast.error("Erro ao carregar denúncias")
+    }
+  }
+
+  const filteredReports = useMemo(() => {
+    let filtered = reports
+
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((r) => r.status === statusFilter)
+    }
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(
+        (r) =>
+          r.materialTitle.toLowerCase().includes(query) ||
+          r.materialAuthorName.toLowerCase().includes(query) ||
+          r.reporterName.toLowerCase().includes(query),
+      )
+    }
+
+    return filtered
+  }, [reports, searchQuery, statusFilter])
+
+  const paginatedReports = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+    return filteredReports.slice(startIndex, startIndex + ITEMS_PER_PAGE)
+  }, [filteredReports, currentPage])
+
+  const totalPages = Math.ceil(filteredReports.length / ITEMS_PER_PAGE)
+
+  const handleResolveReport = async (action: "resolved" | "rejected") => {
+    if (!selectedReport) return
+
+    try {
+      await adminService.resolveReport(selectedReport.id, action)
+      toast.success(action === "resolved" ? "Denúncia resolvida" : "Denúncia rejeitada")
+      loadReports()
+      setSelectedReport(null)
+    } catch (error) {
+      toast.error("Erro ao processar denúncia")
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Gerenciar Denúncias</h1>
+        <p className="text-muted-foreground mt-2">Revise e tome ação sobre denúncias de materiais</p>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por material, autor ou denunciante..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value)
+              setCurrentPage(1)
+            }}
+            className="pl-10 pr-10"
+          />
+          {searchQuery && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+              onClick={() => setSearchQuery("")}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        <Select
+          value={statusFilter}
+          onValueChange={(value: any) => {
+            setStatusFilter(value)
+            setCurrentPage(1)
+          }}
+        >
+          <SelectTrigger className="sm:w-[200px]">
+            <SelectValue placeholder="Filtrar por status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os status</SelectItem>
+            <SelectItem value="pending">Pendentes</SelectItem>
+            <SelectItem value="resolved">Resolvidas</SelectItem>
+            <SelectItem value="rejected">Rejeitadas</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Denúncias</CardTitle>
+          <CardDescription>
+            {filteredReports.length} denúncia{filteredReports.length !== 1 ? "s" : ""} encontrada
+            {filteredReports.length !== 1 ? "s" : ""}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Material</TableHead>
+                  <TableHead>Autor do Material</TableHead>
+                  <TableHead>Denunciante</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedReports.map((report) => (
+                  <TableRow key={report.id}>
+                    <TableCell className="font-medium">{report.materialTitle}</TableCell>
+                    <TableCell>{report.materialAuthorName}</TableCell>
+                    <TableCell>{report.reporterName}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          report.status === "resolved"
+                            ? "default"
+                            : report.status === "rejected"
+                              ? "destructive"
+                              : "secondary"
+                        }
+                      >
+                        {report.status === "resolved"
+                          ? "Resolvida"
+                          : report.status === "rejected"
+                            ? "Rejeitada"
+                            : "Pendente"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{new Date(report.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedReport(report)}>
+                        Revisar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {totalPages > 1 && (
+            <div className="mt-4">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((page) => (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(page)}
+                        isActive={currentPage === page}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  {totalPages > 5 && (
+                    <PaginationItem>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={!!selectedReport} onOpenChange={() => setSelectedReport(null)}>
+        <DialogContent className="max-w-[calc(100vw-2rem)]">
+          <DialogHeader>
+            <DialogTitle>Revisar Denúncia</DialogTitle>
+            <DialogDescription>Analise a denúncia e tome uma ação</DialogDescription>
+          </DialogHeader>
+          {selectedReport && (
+            <div className="space-y-4">
+              <div>
+                <Label>Material</Label>
+                <p className="text-sm">{selectedReport.materialTitle}</p>
+              </div>
+              <div>
+                <Label>Autor do Material</Label>
+                <p className="text-sm">{selectedReport.materialAuthorName}</p>
+              </div>
+              <div>
+                <Label>Denunciante</Label>
+                <p className="text-sm">{selectedReport.reporterName}</p>
+              </div>
+              <div>
+                <Label>Motivo da Denúncia</Label>
+                <p className="text-sm whitespace-pre-wrap">{selectedReport.reason}</p>
+              </div>
+              <div>
+                <Label>Data</Label>
+                <p className="text-sm">{new Date(selectedReport.createdAt).toLocaleString()}</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="flex justify-between">
+            <Button
+              variant="outline"
+              onClick={() => handleResolveReport("rejected")}
+              className="hover:bg-destructive/10 hover:text-destructive"
+            >
+              <XCircle className="h-4 w-4 mr-2" />
+              Rejeitar Denúncia
+            </Button>
+            <Button onClick={() => handleResolveReport("resolved")}>
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Resolver e Remover Material
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}

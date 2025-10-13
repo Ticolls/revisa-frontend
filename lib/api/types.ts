@@ -1,0 +1,239 @@
+// Tipos base para requisições e respostas da API
+export interface ApiResponse<T = unknown> {
+  data?: T
+  message?: string
+  success: boolean
+}
+
+export interface ApiError {
+  message: string
+  code?: string
+  status?: number
+  errors?: Record<string, string[]>
+}
+
+// Tipos de autenticação
+export interface LoginRequest {
+  email: string
+  password: string
+}
+
+export interface RegisterRequest {
+  name: string
+  email: string
+  password: string
+  confirmPassword: string
+}
+
+export interface ForgotPasswordRequest {
+  email: string
+}
+
+export interface AuthResponse {
+  user: {
+    id: string
+    name: string
+    email: string
+  }
+  token: string
+}
+
+export interface ResetPasswordResponse {
+  message: string
+}
+
+// Tipos para todas as entidades da plataforma
+
+// Tipos de Usuário
+export interface User {
+  id: string
+  name: string
+  email: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface UpdateUserRequest {
+  name?: string
+  email?: string
+}
+
+export interface UpdatePasswordRequest {
+  currentPassword: string
+  newPassword: string
+  confirmPassword: string
+}
+
+export interface UserPreferences {
+  notifyRequestFulfilled: boolean
+  notifyNewRequest: boolean
+  notifyNewMaterialInFavoriteDiscipline: boolean
+}
+
+export interface UpdatePreferencesRequest {
+  notifyRequestFulfilled?: boolean
+  notifyNewRequest?: boolean
+  notifyNewMaterialInFavoriteDiscipline?: boolean
+}
+
+// Tipos de Disciplina
+export interface Discipline {
+  id: string
+  code: string
+  name: string
+  semester: string
+  totalMaterials: number
+  isFavorited: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DisciplineFilters {
+  search?: string
+  semester?: string
+  onlyFavorites?: boolean
+  page?: number
+  limit?: number
+}
+
+export interface PaginatedResponse<T> {
+  data: T[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}
+
+// Tipos de Material
+export interface Material {
+  id: string
+  title: string
+  description: string
+  type: "Provas antigas" | "Listas de exercícios" | "Resumo" | "Slides"
+  disciplineId: string
+  disciplineName: string
+  disciplineCode: string
+  authorId: string
+  authorName: string
+  professor?: string
+  fileUrl: string
+  fileName: string
+  fileSize: number
+  answerKeyUrl?: string
+  answerKeyFileName?: string
+  downloads: number
+  uploadedAt: string
+  isOwner: boolean
+}
+
+export interface MaterialFilters {
+  search?: string
+  type?: string
+  professor?: string
+  page?: number
+  limit?: number
+}
+
+export interface CreateMaterialRequest {
+  title: string
+  description: string
+  type: "Provas antigas" | "Listas de exercícios" | "Resumo" | "Slides"
+  disciplineId: string
+  professor?: string
+  file: File
+  answerKey?: File
+}
+
+export interface ReportMaterialRequest {
+  materialId: string
+  reason: string
+}
+
+// Tipos de Solicitação
+export interface Request {
+  id: string
+  title: string
+  description: string
+  disciplineId: string
+  disciplineCode: string
+  disciplineName: string
+  authorId: string
+  authorName: string
+  status: "pending" | "fulfilled" | "rejected"
+  createdAt: string
+  updatedAt: string
+  fulfilledBy?: {
+    userId: string
+    userName: string
+    materialId: string
+    materialTitle: string
+  }
+}
+
+export interface RequestFilters {
+  search?: string
+  disciplineId?: string
+  status?: "pending" | "fulfilled" | "rejected"
+  onlyMine?: boolean
+  page?: number
+  limit?: number
+}
+
+export interface CreateRequestRequest {
+  title: string
+  description: string
+  disciplineId: string
+}
+
+export interface FulfillRequestRequest {
+  requestId: string
+  materialId: string
+}
+
+// Tipos de Notificação
+export interface Notification {
+  id: string
+  type: "request_fulfilled" | "new_request" | "new_material"
+  title: string
+  message: string
+  read: boolean
+  createdAt: string
+  data: {
+    requestId?: string
+    materialId?: string
+    disciplineId?: string
+  }
+}
+
+export interface NotificationFilters {
+  onlyUnread?: boolean
+  page?: number
+  limit?: number
+}
+
+// Tipos de Download
+export interface Download {
+  id: string
+  materialId: string
+  materialTitle: string
+  disciplineCode: string
+  disciplineName: string
+  downloadedAt: string
+}
+
+// Configuração do cliente
+export interface ApiClientConfig {
+  baseURL?: string
+  timeout?: number
+  headers?: Record<string, string>
+}
+
+export type RequestInterceptor = (
+  config: RequestInit & { url: string },
+) => (RequestInit & { url: string }) | Promise<RequestInit & { url: string }>
+
+export type ResponseInterceptor = (response: Response) => Response | Promise<Response>
+
+export type ErrorInterceptor = (error: ApiError) => void | Promise<void>
