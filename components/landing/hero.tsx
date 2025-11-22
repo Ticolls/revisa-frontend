@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react"
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden py-16 sm:py-24 lg:py-32">
+    <section className="relative overflow-hidden overflow-x-hidden py-16 sm:py-24 lg:py-32">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl text-center">
 
@@ -16,7 +16,7 @@ export function Hero() {
           {/* Description */}
           <p className="text-lg sm:text-xl text-muted-foreground mb-10 text-pretty max-w-2xl mx-auto leading-relaxed">
             A plataforma colaborativa para estudantes de Ciência da Computação da UFBA. Faça upload e download de
-            materiais acadêmicos organizados por matéria.
+            materiais acadêmicos organizados por disciplina.
           </p>
 
           {/* CTA Buttons */}

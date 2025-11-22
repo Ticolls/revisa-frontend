@@ -29,7 +29,7 @@ export function AdminMobileNav() {
       {/* Mobile menu overlay */}
       {isOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm cursor-pointer" onClick={() => setIsOpen(false)} />
           <div className="fixed inset-y-0 left-0 w-full max-w-xs bg-card border-r border-border shadow-lg">
             <div className="flex flex-col h-full">
               {/* Header */}

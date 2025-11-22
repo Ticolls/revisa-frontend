@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { useRouter } from "next/navigation"
-import { authService, adminService, type Report } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -29,11 +27,13 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { withAdminAuth } from "@/lib/auth/protected-route"
+import { adminService } from "@/lib/api/services/admin.service"
+import { Report } from "@/lib/api/types"
 
 const ITEMS_PER_PAGE = 10
 
-export default function AdminReportsPage() {
-  const router = useRouter()
+function AdminReportsPage() {
   const [loading, setLoading] = useState(true)
   const [reports, setReports] = useState<Report[]>([])
   const [currentPage, setCurrentPage] = useState(1)
@@ -42,15 +42,9 @@ export default function AdminReportsPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "resolved" | "rejected">("all")
 
   useEffect(() => {
-    const user = authService.getCurrentUser()
-    if (!user || !user.isAdmin) {
-      router.push("/login")
-      return
-    }
-
     loadReports()
     setLoading(false)
-  }, [router])
+  }, [])
 
   const loadReports = async () => {
     try {
@@ -305,3 +299,5 @@ export default function AdminReportsPage() {
     </div>
   )
 }
+
+export default withAdminAuth(AdminReportsPage)

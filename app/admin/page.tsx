@@ -1,16 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { authService, adminService } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Users, BookOpen, FileText, MessageSquare, Flag } from "lucide-react"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { adminService } from "@/lib/api/services/admin.service"
+import { withAdminAuth } from "@/lib/auth/protected-route"
 
-export default function AdminDashboardPage() {
-  const router = useRouter()
+function AdminDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -23,16 +22,10 @@ export default function AdminDashboardPage() {
   const [chartData, setChartData] = useState<any[]>([])
 
   useEffect(() => {
-    const user = authService.getCurrentUser()
-    if (!user || !user.isAdmin) {
-      router.push("/login")
-      return
-    }
-
     loadStatistics()
     loadChartData()
     setLoading(false)
-  }, [router])
+  }, [])
 
   useEffect(() => {
     loadChartData()
@@ -344,7 +337,7 @@ export default function AdminDashboardPage() {
                   stroke="hsl(0, 84%, 60%)"
                   fill="url(#fillDenuncias)"
                   strokeWidth={2}
-                />
+                /> 
               </AreaChart>
             </ChartContainer>
           </CardContent>
@@ -353,3 +346,5 @@ export default function AdminDashboardPage() {
     </div>
   )
 }
+
+export default withAdminAuth(AdminDashboardPage)

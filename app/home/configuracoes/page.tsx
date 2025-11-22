@@ -20,8 +20,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Settings, Bell, User, Trash2, CheckCircle2 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { withAdminAuth } from "@/lib/auth/protected-route"
 
-export default function ConfiguracoesPage() {
+function ConfigPage() {
   const router = useRouter()
   const [showSuccess, setShowSuccess] = useState(false)
   const [name, setName] = useState("João Silva")
@@ -242,3 +243,4 @@ export default function ConfiguracoesPage() {
     </div>
   )
 }
+export default withAdminAuth(ConfigPage)

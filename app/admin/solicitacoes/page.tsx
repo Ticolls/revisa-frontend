@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { useRouter } from "next/navigation"
-import { authService, adminService, type Request } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -39,11 +37,13 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { toast } from "react-toastify"
+import { adminService } from "@/lib/api/services/admin.service"
+import { Request } from "@/lib/api/types"
+import { withAdminAuth } from "@/lib/auth/protected-route"
 
 const ITEMS_PER_PAGE = 10
 
-export default function AdminRequestsPage() {
-  const router = useRouter()
+function AdminRequestsPage() {
   const [loading, setLoading] = useState(true)
   const [requests, setRequests] = useState<Request[]>([])
   const [currentPage, setCurrentPage] = useState(1)
@@ -54,15 +54,9 @@ export default function AdminRequestsPage() {
   const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
-    const user = authService.getCurrentUser()
-    if (!user || !user.isAdmin) {
-      router.push("/login")
-      return
-    }
-
     loadRequests()
     setLoading(false)
-  }, [router])
+  }, [])
 
   const loadRequests = async () => {
     try {
@@ -317,3 +311,4 @@ export default function AdminRequestsPage() {
     </div>
   )
 }
+export default withAdminAuth(AdminRequestsPage)

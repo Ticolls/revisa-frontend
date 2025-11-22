@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { useRouter } from "next/navigation"
-import { authService, adminService, type Material } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -38,11 +36,13 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { toast } from "react-toastify"
+import { Material } from "@/lib/api/types"
+import { adminService } from "@/lib/api/services/admin.service"
+import { withAdminAuth } from "@/lib/auth/protected-route"
 
 const ITEMS_PER_PAGE = 10
 
-export default function AdminMaterialsPage() {
-  const router = useRouter()
+function AdminMaterialsPage() {
   const [loading, setLoading] = useState(true)
   const [materials, setMaterials] = useState<Material[]>([])
   const [currentPage, setCurrentPage] = useState(1)
@@ -53,15 +53,8 @@ export default function AdminMaterialsPage() {
   const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
-    const user = authService.getCurrentUser()
-    if (!user || !user.isAdmin) {
-      router.push("/login")
-      return
-    }
-
     loadMaterials()
-    setLoading(false)
-  }, [router])
+  }, [])
 
   const loadMaterials = async () => {
     try {
@@ -69,6 +62,8 @@ export default function AdminMaterialsPage() {
       setMaterials(response.data)
     } catch (error) {
       toast.error("Erro ao carregar materiais")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -308,3 +303,5 @@ export default function AdminMaterialsPage() {
     </div>
   )
 }
+
+export default withAdminAuth(AdminMaterialsPage)

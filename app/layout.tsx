@@ -5,11 +5,12 @@ import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { Suspense } from "react"
+import { Providers } from "@/components/providers"
 
 export const metadata: Metadata = {
   title: "REVISA - Plataforma de Materiais Acadêmicos UFBA",
   description:
-    "Plataforma colaborativa para estudantes de Ciência da Computação da UFBA compartilharem materiais acadêmicos organizados por matéria.",
+    "Plataforma colaborativa para estudantes de Ciência da Computação da UFBA compartilharem materiais acadêmicos organizados por disciplina.",
   generator: "v0.app",
 }
 
@@ -19,12 +20,14 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <Suspense fallback={null}>
-          {children}
-          <Analytics />
-        </Suspense>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`font-sans overflow-x-hidden ${GeistSans.variable} ${GeistMono.variable}`}>
+        <Providers>
+          <Suspense fallback={null}>
+            {children}
+            <Analytics />
+          </Suspense>
+        </Providers>
       </body>
     </html>
   )

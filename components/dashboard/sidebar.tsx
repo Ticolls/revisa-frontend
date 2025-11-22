@@ -6,6 +6,7 @@ import { Home, BookOpen, FileQuestion, Upload, LogOut, Settings } from "lucide-r
 import { Button } from "@/components/ui/button"
 import { authService } from "@/lib/api/services/auth.service"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/hooks/use-auth"
 
 const navigation = [
   { name: "Início", href: "/home", icon: Home },
@@ -18,10 +19,13 @@ const navigation = [
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const { setUser } = useAuth()
 
   const handleLogout = async () => {
     try {
       await authService.logout()
+      // Limpar o contexto
+      setUser(null)
       router.push("/login")
     } catch (error) {
       console.error("Erro ao fazer logout:", error)

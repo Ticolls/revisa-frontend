@@ -1,17 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { authService } from "@/lib/api"
 import { MobileNav } from "./mobile-nav"
 import { NotificationsPopover } from "./notifications-popover"
+import { useAuth } from "@/lib/hooks/use-auth"
 
 export function DashboardHeader() {
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null)
-
-  useEffect(() => {
-    const currentUser = authService.getCurrentUser()
-    setUser(currentUser)
-  }, [])
+  const { user } = useAuth()
 
   return (
     <header className="sticky top-0 z-40 bg-background border-b border-border">

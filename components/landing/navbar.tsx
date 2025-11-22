@@ -26,12 +26,6 @@ export function Navbar() {
             >
               Funcionalidades
             </Link>
-            <Link
-              href="#about"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Sobre
-            </Link>
             <div className="flex items-center gap-3">
               <Button asChild variant="ghost" size="sm">
                 <Link href="/login">Entrar</Link>

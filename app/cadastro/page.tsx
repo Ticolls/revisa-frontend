@@ -14,9 +14,11 @@ import { authService } from "@/lib/api/services/auth.service"
 import { handleApiError } from "@/lib/api/errors"
 import { validateRegisterForm } from "@/lib/validations/auth"
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle2 } from "lucide-react"
+import { useAuth } from "@/lib/hooks/use-auth"
 
 export default function RegisterPage() {
   const router = useRouter()
+  const { updateUser } = useAuth()
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -100,6 +102,13 @@ export default function RegisterPage() {
         confirmPassword: formData.confirmPassword,
       })
 
+      // Buscar usuário completo após registro
+      const fullUser = await authService.getCurrentUser()
+      
+      // Atualizar o contexto com o usuário registrado
+      updateUser(fullUser)
+
+      // Redirecionar para home
       router.push("/home")
     } catch (error) {
       const apiErrorData = handleApiError(error)

@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, BookOpen, Heart, FileText, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import { withAuth } from "@/lib/auth/protected-route"
 
-export default function DisciplinasPage() {
+function DisciplinesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [semesterFilter, setSemesterFilter] = useState<string>("all")
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
@@ -279,3 +280,4 @@ export default function DisciplinasPage() {
     </div>
   )
 }
+export default withAuth(DisciplinesPage)

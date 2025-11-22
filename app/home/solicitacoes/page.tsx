@@ -7,8 +7,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { FileQuestion, Clock, CheckCircle2, XCircle, Upload, Users } from "lucide-react"
 import { NovaSolicitacaoModal } from "@/components/solicitacoes/nova-solicitacao-modal"
 import { useRouter } from "next/navigation"
+import { withAdminAuth } from "@/lib/auth/protected-route"
 
-export default function SolicitacoesPage() {
+function RequestsPage() {
   const [showSuccess, setShowSuccess] = useState(false)
   const router = useRouter()
 
@@ -256,3 +257,5 @@ export default function SolicitacoesPage() {
     </div>
   )
 }
+
+export default withAdminAuth(RequestsPage)

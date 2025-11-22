@@ -10,7 +10,7 @@ class ApiClient {
   private errorInterceptors: ErrorInterceptor[] = []
 
   constructor(config: ApiClientConfig = {}) {
-    this.baseURL = config.baseURL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+    this.baseURL = config.baseURL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
     this.timeout = config.timeout || 30000
     this.defaultHeaders = {
       "Content-Type": "application/json",
@@ -72,6 +72,7 @@ class ApiClient {
     let config: RequestInit & { url: string } = {
       url,
       ...options,
+      credentials: options.credentials || "include", // Sempre incluir cookies
       headers: {
         ...this.defaultHeaders,
         ...options.headers,
@@ -98,30 +99,26 @@ class ApiClient {
       response = await this.applyResponseInterceptors(response)
 
       // Processar resposta
-      const data = await response.json()
+      const jsonResponse = await response.json()
 
       // Verificar se houve erro
       if (!response.ok) {
         const apiError: ApiError = {
-          message: data.message || "Erro na requisição",
-          code: data.code,
-          status: response.status,
-          errors: data.errors,
+          message: jsonResponse.message || "Erro na requisição",
+          status: jsonResponse.statusCode,
         }
 
         await this.applyErrorInterceptors(apiError)
         throw new ApiException(apiError)
       }
 
-      return data as T
+      return jsonResponse as T
     } catch (error) {
       clearTimeout(timeoutId)
-
       // Timeout
       if (error instanceof Error && error.name === "AbortError") {
         const timeoutError: ApiError = {
           message: "A requisição demorou muito. Tente novamente.",
-          code: "TIMEOUT",
         }
         await this.applyErrorInterceptors(timeoutError)
         throw new ApiException(timeoutError)
@@ -135,7 +132,6 @@ class ApiClient {
       // Erro desconhecido
       const unknownError: ApiError = {
         message: "Ocorreu um erro inesperado",
-        code: "UNKNOWN",
       }
       await this.applyErrorInterceptors(unknownError)
       throw new ApiException(unknownError)
@@ -185,30 +181,17 @@ class ApiClient {
 // Instância singleton do cliente
 export const apiClient = new ApiClient()
 
-// Interceptador para adicionar token de autenticação
-apiClient.addRequestInterceptor((config) => {
-  const token = localStorage.getItem("auth_token")
-
-  if (token) {
-    config.headers = {
-      ...config.headers,
-      Authorization: `Bearer ${token}`,
-    }
-  }
-
-  return config
-})
-
 // Interceptador para tratar erro 401 (não autorizado)
 apiClient.addErrorInterceptor((error) => {
   if (error.status === 401) {
-    // Limpar token e redirecionar para login
-    localStorage.removeItem("auth_token")
-    localStorage.removeItem("user")
-
-    // Apenas redirecionar se não estiver na página de login
-    if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
-      window.location.href = "/login"
+    // Limpar dados do usuário e redirecionar para login
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("user")
+      
+      // Apenas redirecionar se não estiver na página de login
+      if (!window.location.pathname.includes("/login")) {
+        window.location.href = "/login"
+      }
     }
   }
 })

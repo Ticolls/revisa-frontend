@@ -1,8 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { authService } from "@/lib/api/services/auth.service"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -17,37 +15,14 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Heart, Download, BookOpen, FileText } from "lucide-react"
 import Link from "next/link"
+import { withAuth } from "@/lib/auth/protected-route"
+import { useAuth } from "@/lib/hooks/use-auth"
 
-export default function HomePage() {
-  const router = useRouter()
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+function HomePage() {
+  const { user } = useAuth()
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false)
   const [selectedDownload, setSelectedDownload] = useState<any>(null)
 
-  useEffect(() => {
-    if (!authService.isAuthenticated()) {
-      router.push("/login")
-      return
-    }
-
-    const currentUser = authService.getCurrentUser()
-    setUser(currentUser)
-    setIsLoading(false)
-  }, [router])
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!user) return null
 
   const favoriteDisciplines = [
     { id: 1, code: "MATA40", name: "Estruturas de Dados e Algoritmos I", materials: 42 },
@@ -83,7 +58,7 @@ export default function HomePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">Olá, {user.name.split(" ")[0]}! 👋</h1>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Olá, {user?.name.split(" ")[0]}! 👋</h1>
         <p className="text-muted-foreground">
           Bem-vindo de volta à plataforma REVISA. Continue seus estudos de onde parou.
         </p>
@@ -143,7 +118,7 @@ export default function HomePage() {
               {myRequests.map((request) => (
                 <div
                   key={request.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors group cursor-pointer"
+                  className="flex items-center justify-between p-3 rounded-lg border border-border transition-colors group"
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
@@ -210,7 +185,7 @@ export default function HomePage() {
       </div>
 
       <Card className="bg-primary/5 border-primary/20">
-        <CardContent className="pt-6 flex items-center justify-center">
+        <CardContent className="py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -234,13 +209,15 @@ export default function HomePage() {
         <AlertDialogContent className="max-w-[calc(100vw-2rem)]">
           <AlertDialogHeader>
             <AlertDialogTitle>Baixar novamente?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Você já baixou este material anteriormente. Deseja fazer o download novamente?
-              <div className="mt-4 p-3 bg-muted rounded-lg">
+            <div className="space-y-4">
+              <AlertDialogDescription>
+                Você já baixou este material anteriormente. Deseja fazer o download novamente?
+              </AlertDialogDescription>
+              <div className="p-3 bg-muted rounded-lg">
                 <span className="font-medium text-foreground block">{selectedDownload?.name}</span>
                 <span className="text-sm text-muted-foreground mt-1 block">{selectedDownload?.discipline}</span>
               </div>
-            </AlertDialogDescription>
+            </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="cursor-pointer hover:bg-destructive/10 hover:text-destructive">
@@ -255,3 +232,5 @@ export default function HomePage() {
     </div>
   )
 }
+
+export default withAuth(HomePage)

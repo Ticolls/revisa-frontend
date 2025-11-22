@@ -84,7 +84,7 @@ npm run dev
 Adicione a URL da API no arquivo `.env.local`:
 
 \`\`\`env
-NEXT_PUBLIC_API_URL=http://localhost:3000/api
+NEXT_PUBLIC_API_URL=http://localhost:3001
 \`\`\`
 
 ### Estrutura de Pastas

@@ -14,9 +14,11 @@ import { authService } from "@/lib/api/services/auth.service"
 import { handleApiError } from "@/lib/api/errors"
 import { validateLoginForm } from "@/lib/validations/auth"
 import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react"
+import { useAuth } from "@/lib/hooks/use-auth"
 
 export default function LoginPage() {
   const router = useRouter()
+  const { updateUser } = useAuth()
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -30,7 +32,6 @@ export default function LoginPage() {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
 
-    // Limpar erro do campo ao digitar
     if (errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev }
@@ -39,7 +40,7 @@ export default function LoginPage() {
       })
     }
 
-    // Limpar erro da API
+
     if (apiError) {
       setApiError("")
     }
@@ -49,7 +50,6 @@ export default function LoginPage() {
     e.preventDefault()
     setApiError("")
 
-    // Validar formulário
     const validationErrors = validateLoginForm(formData.email, formData.password)
 
     if (validationErrors.length > 0) {
@@ -64,16 +64,25 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const response = await authService.login({
+      await authService.login({
         email: formData.email,
         password: formData.password,
       })
 
-      if (response.user.isAdmin) {
-        router.push("/admin")
-      } else {
-        router.push("/home")
-      }
+      const fullUser = await authService.getCurrentUser()
+      
+      updateUser(fullUser)
+
+      // Redirecionar baseado no role
+      // if (fullUser.role === "ADMIN") {
+      //   router.push("/admin")
+      // } else {
+      //   router.push("/home")
+      // }
+
+      router.push("/home")
+
+
     } catch (error) {
       const apiErrorData = handleApiError(error)
       setApiError(apiErrorData.message)

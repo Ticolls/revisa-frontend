@@ -7,9 +7,7 @@ export interface ApiResponse<T = unknown> {
 
 export interface ApiError {
   message: string
-  code?: string
   status?: number
-  errors?: Record<string, string[]>
 }
 
 // Tipos de autenticação
@@ -29,13 +27,19 @@ export interface ForgotPasswordRequest {
   email: string
 }
 
+export enum Role {
+  DEFAULT = "DEFAULT",
+  ADMIN = "ADMIN",
+}
+
 export interface AuthResponse {
   user: {
+    role: Role
     id: string
     name: string
     email: string
   }
-  token: string
+  token?: string // Opcional, pois agora vem via cookie httpOnly
 }
 
 export interface ResetPasswordResponse {
@@ -49,6 +53,8 @@ export interface User {
   id: string
   name: string
   email: string
+  role: Role
+  isVerified: boolean
   createdAt: string
   updatedAt: string
 }
@@ -56,6 +62,7 @@ export interface User {
 export interface UpdateUserRequest {
   name?: string
   email?: string
+  password?: string
 }
 
 export interface UpdatePasswordRequest {
@@ -98,6 +105,8 @@ export interface DisciplineFilters {
 
 export interface PaginatedResponse<T> {
   data: T[]
+  message?: string
+  success: boolean
   pagination: {
     page: number
     limit: number
@@ -149,6 +158,28 @@ export interface CreateMaterialRequest {
 export interface ReportMaterialRequest {
   materialId: string
   reason: string
+}
+
+
+export interface Report {
+  id: string
+  materialId: string
+  materialTitle: string
+  materialAuthorId: string
+  materialAuthorName: string
+  reporterId: string
+  reporterName: string
+  reason: string
+  status: "pending" | "resolved" | "rejected"
+  createdAt: string
+  resolvedAt?: string
+  resolvedBy?: string
+}
+
+export interface ReportFilters {
+  status?: "pending" | "resolved" | "rejected"
+  page?: number
+  limit?: number
 }
 
 // Tipos de Solicitação

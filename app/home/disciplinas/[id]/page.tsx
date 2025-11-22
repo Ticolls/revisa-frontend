@@ -44,6 +44,7 @@ import {
   HardDrive,
 } from "lucide-react"
 import Link from "next/link"
+import { withAuth } from "@/lib/auth/protected-route"
 
 // Mock data
 const disciplinesData: Record<string, any> = {
@@ -220,9 +221,8 @@ const generateMaterials = (disciplineCode: string) => {
 
 const ITEMS_PER_PAGE = 6
 
-export default function DisciplinePage() {
+function DisciplinePage() {
   const params = useParams()
-  const router = useRouter()
   const disciplineId = params.id as string
 
   const discipline = disciplinesData[disciplineId]
@@ -721,7 +721,7 @@ export default function DisciplinePage() {
 
       {/* Material Details Modal */}
       <Dialog open={materialDetailsOpen} onOpenChange={setMaterialDetailsOpen}>
-        <DialogContent className="max-w-2xl max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto">
           {selectedMaterial && (
             <>
               <DialogHeader>
@@ -837,3 +837,4 @@ export default function DisciplinePage() {
     </div>
   )
 }
+export default withAuth(DisciplinePage)

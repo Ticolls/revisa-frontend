@@ -1,8 +1,11 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { BarChart3, Users, BookOpen, FileText, MessageSquare, Flag } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
+import { BarChart3, Users, BookOpen, FileText, MessageSquare, Flag, LogOut } from "lucide-react"
+import authService from "@/lib/api/services/auth.service"
+import { Button } from "../ui/button"
+import { useAuth } from "@/lib/hooks/use-auth"
 
 const navigation = [
   { name: "Dashboard", href: "/admin", icon: BarChart3 },
@@ -14,7 +17,21 @@ const navigation = [
 ]
 
 export function AdminSidebar() {
-  const pathname = usePathname()
+
+    const pathname = usePathname()
+    const router = useRouter()
+    const { setUser } = useAuth()
+  
+    const handleLogout = async () => {
+      try {
+        await authService.logout()
+        // Limpar o contexto
+        setUser(null)
+        router.push("/login")
+      } catch (error) {
+        console.error("Erro ao fazer logout:", error)
+      }
+    }
 
   return (
     <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-card border-r border-border">
@@ -52,6 +69,13 @@ export function AdminSidebar() {
             )
           })}
         </nav>
+        {/* Logout */}
+        <div className="p-4 border-t border-border">
+          <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={handleLogout}>
+            <LogOut className="mr-3 h-5 w-5" />
+            Sair
+          </Button>
+        </div>
       </div>
     </aside>
   )

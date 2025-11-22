@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { useRouter } from "next/navigation"
-import { authService, adminService, type User } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -16,8 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Trash2, Plus, Edit, Search, X } from "lucide-react"
-import { toast } from "sonner"
+import { Trash2, Plus, Edit, Search, X, AlertCircle } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -37,11 +34,22 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { User } from "@/lib/api/types"
+import { adminService } from "@/lib/api/services/admin.service"
+import { ApiException } from "@/lib/api/errors"
+import { useToast } from "@/lib/hooks/use-toast"
+import { withAdminAuth } from "@/lib/auth/protected-route"
 
 const ITEMS_PER_PAGE = 10
 
-export default function AdminUsersPage() {
-  const router = useRouter()
+interface FormErrors {
+  name?: string
+  email?: string
+  password?: string
+}
+
+function AdminUsersPage() {
+  const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [users, setUsers] = useState<User[]>([])
   const [currentPage, setCurrentPage] = useState(1)
@@ -50,25 +58,64 @@ export default function AdminUsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [userForm, setUserForm] = useState({ name: "", email: "", password: "" })
   const [searchQuery, setSearchQuery] = useState("")
+  const [formErrors, setFormErrors] = useState<FormErrors>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
-    const user = authService.getCurrentUser()
-    if (!user || !user.isAdmin) {
-      router.push("/login")
-      return
-    }
-
     loadUsers()
-    setLoading(false)
-  }, [router])
+  }, [])
 
   const loadUsers = async () => {
     try {
       const response = await adminService.getUsers(1, 100)
       setUsers(response.data)
     } catch (error) {
-      toast.error("Erro ao carregar usuários")
+      if (error instanceof ApiException) {
+        toast.error(error.message)
+        return
+      }
+      toast.error("Erro ao carregar usuários. Tente novamente.")
+    } finally {
+      setLoading(false)
     }
+  }
+
+  const validateForm = (): boolean => {
+    const errors: FormErrors = {}
+    
+    // Validar nome
+    if (!userForm.name.trim()) {
+      errors.name = "Nome é obrigatório"
+    } else if (userForm.name.trim().length < 3) {
+      errors.name = "Nome deve ter pelo menos 3 caracteres"
+    }
+
+    // Validar email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (userForm.email.trim() == "") {
+      errors.email = "Email é obrigatório"
+    } else if (!emailRegex.test(userForm.email)) {
+      errors.email = "Email inválido"
+    }
+
+    // Validar senha (apenas para novo usuário)
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+    if (!editingUser) {
+      if (userForm.password.trim() == "") {
+        errors.password = "Senha é obrigatória"
+      } else if (!passwordRegex.test(userForm.password)) {
+        errors.password = "A senha deve ter pelo menos 8 caracteres e conter letras e números"
+      }
+    } else {
+      if (userForm.password.trim() != "") {
+        if (!passwordRegex.test(userForm.password)) {
+          errors.password = "A senha deve ter pelo menos 8 caracteres e conter letras e números"
+        }
+      }
+    }
+
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
   }
 
   const filteredUsers = useMemo(() => {
@@ -88,31 +135,64 @@ export default function AdminUsersPage() {
   const handleDeleteUser = async () => {
     if (!userToDelete) return
 
+    setIsSubmitting(true)
     try {
       await adminService.deleteUser(userToDelete.id)
-      toast.success("Usuário excluído com sucesso")
-      loadUsers()
-    } catch (error) {
-      toast.error("Erro ao excluir usuário")
-    } finally {
+      toast.success("Usuário excluído com sucesso!")
+      await loadUsers()
       setUserToDelete(null)
+    } catch (error) {
+      if (error instanceof ApiException) {
+        toast.error(error.message)
+      } else {
+        toast.error("Erro ao excluir usuário. Tente novamente.")
+      }
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const handleSaveUser = async () => {
+    // Validar formulário
+    if (!validateForm()) {
+      return
+    }
+
+    setIsSubmitting(true)
     try {
       if (editingUser) {
-        await adminService.updateUser(editingUser.id, userForm)
-        toast.success("Usuário atualizado com sucesso")
+        const updateData = userForm.password.trim() === "" 
+          ? { name: userForm.name, email: userForm.email }
+          : userForm
+        await adminService.updateUser(editingUser.id, updateData)
+        toast.success("Usuário atualizado com sucesso!")
       } else {
         await adminService.createUser(userForm)
-        toast.success("Usuário criado com sucesso")
+        toast.success("Usuário criado com sucesso!")
       }
-      loadUsers()
+      await loadUsers()
       setShowUserDialog(false)
+      setFormErrors({})
     } catch (error) {
-      toast.error("Erro ao salvar usuário")
+      if (error instanceof ApiException) {
+        toast.error(error.message)
+      } else {
+        toast.error(editingUser ? "Erro ao atualizar usuário. Tente novamente." : "Erro ao criar usuário. Tente novamente.")
+      }
+    } finally {
+      setIsSubmitting(false)
     }
+  }
+
+  const handleOpenDialog = (user: User | null) => {
+    setEditingUser(user)
+    if (user) {
+      setUserForm({ name: user.name, email: user.email, password: "" })
+    } else {
+      setUserForm({ name: "", email: "", password: "" })
+    }
+    setFormErrors({})
+    setShowUserDialog(true)
   }
 
   if (loading) {
@@ -134,11 +214,7 @@ export default function AdminUsersPage() {
           <p className="text-muted-foreground mt-2">Visualize e gerencie todos os usuários da plataforma</p>
         </div>
         <Button
-          onClick={() => {
-            setEditingUser(null)
-            setUserForm({ name: "", email: "", password: "" })
-            setShowUserDialog(true)
-          }}
+          onClick={() => handleOpenDialog(null)}
           className="w-full sm:w-auto"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -199,12 +275,9 @@ export default function AdminUsersPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => {
-                            setEditingUser(user)
-                            setUserForm({ name: user.name, email: user.email, password: "" })
-                            setShowUserDialog(true)
-                          }}
-                          disabled={user.isAdmin}
+                          onClick={() => handleOpenDialog(user)}
+                          disabled={user.role.includes("ADMIN")}
+                          title={user.role.includes("ADMIN") ? "Não é possível editar administradores" : "Editar usuário"}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -212,7 +285,8 @@ export default function AdminUsersPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => setUserToDelete(user)}
-                          disabled={user.isAdmin}
+                          disabled={user.role.includes("ADMIN")}
+                          title={user.role.includes("ADMIN") ? "Não é possível excluir administradores" : "Excluir usuário"}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -263,7 +337,7 @@ export default function AdminUsersPage() {
         </CardContent>
       </Card>
 
-      <AlertDialog open={!!userToDelete} onOpenChange={() => setUserToDelete(null)}>
+      <AlertDialog open={!!userToDelete} onOpenChange={() => !isSubmitting && setUserToDelete(null)}>
         <AlertDialogContent className="max-w-[calc(100vw-2rem)]">
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Usuário</AlertDialogTitle>
@@ -273,61 +347,128 @@ export default function AdminUsersPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="hover:bg-destructive/10 hover:text-destructive">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteUser}>Excluir</AlertDialogAction>
+            <AlertDialogCancel 
+              className="hover:bg-destructive/10 hover:text-destructive"
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteUser}
+              disabled={isSubmitting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isSubmitting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={showUserDialog} onOpenChange={setShowUserDialog}>
+      <Dialog open={showUserDialog} onOpenChange={(open) => !isSubmitting && setShowUserDialog(open)}>
         <DialogContent className="max-w-[calc(100vw-2rem)]">
           <DialogHeader>
             <DialogTitle>{editingUser ? "Editar Usuário" : "Novo Usuário"}</DialogTitle>
             <DialogDescription>
-              {editingUser ? "Atualize as informações do usuário" : "Crie um novo usuário"}
+              {editingUser ? "Atualize as informações do usuário" : "Preencha os dados para criar um novo usuário"}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="name">Nome</Label>
+          <div 
+            className="space-y-4"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !isSubmitting) {
+                e.preventDefault()
+                handleSaveUser()
+              }
+            }}
+          >
+            <div className="space-y-2">
+              <Label htmlFor="name">
+                Nome <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="name"
                 value={userForm.name}
-                onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                onChange={(e) => {
+                  setUserForm({ ...userForm, name: e.target.value })
+                  if (formErrors.name) setFormErrors({ ...formErrors, name: undefined })
+                }}
                 placeholder="Ex: João Silva"
+                className={formErrors.name ? "border-destructive" : ""}
+                disabled={isSubmitting}
               />
+              {formErrors.name && (
+                <p className="text-sm text-destructive flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {formErrors.name}
+                </p>
+              )}
             </div>
-            <div>
-              <Label htmlFor="email">Email</Label>
+            <div className="space-y-2">
+              <Label htmlFor="email">
+                Email <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="email"
                 type="email"
                 value={userForm.email}
-                onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                onChange={(e) => {
+                  setUserForm({ ...userForm, email: e.target.value })
+                  if (formErrors.email) setFormErrors({ ...formErrors, email: undefined })
+                }}
                 placeholder="Ex: joao@example.com"
+                className={formErrors.email ? "border-destructive" : ""}
+                disabled={isSubmitting}
               />
+              {formErrors.email && (
+                <p className="text-sm text-destructive flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {formErrors.email}
+                </p>
+              )}
             </div>
-            {!editingUser && (
-              <div>
-                <Label htmlFor="password">Senha</Label>
+              <div className="space-y-2">
+                <Label htmlFor="password">
+                  Senha <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="password"
                   type="password"
                   value={userForm.password}
-                  onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                  placeholder="Senha do usuário"
+                  onChange={(e) => {
+                    setUserForm({ ...userForm, password: e.target.value })
+                    if (formErrors.password) setFormErrors({ ...formErrors, password: undefined })
+                  }}
+                  placeholder="Mínimo 8 caracteres"
+                  className={formErrors.password ? "border-destructive" : ""}
+                  disabled={isSubmitting}
                 />
+                {formErrors.password && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {formErrors.password}
+                  </p>
+                )}
               </div>
-            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowUserDialog(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowUserDialog(false)}
+              disabled={isSubmitting}
+            >
               Cancelar
             </Button>
-            <Button onClick={handleSaveUser}>Salvar</Button>
+            <Button 
+              onClick={handleSaveUser}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Salvando..." : "Salvar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   )
 }
+
+export default withAdminAuth(AdminUsersPage)

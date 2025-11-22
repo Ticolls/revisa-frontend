@@ -31,8 +31,9 @@ import {
 import { Upload, FileText, CheckCircle2, Trash2, Download, UserCheck } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { FileUploadZone } from "@/components/uploads/file-upload-zone"
+import { withAdminAuth } from "@/lib/auth/protected-route"
 
-export default function UploadsPage() {
+function UploadsPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -377,7 +378,7 @@ export default function UploadsPage() {
       </Card>
 
       <Dialog open={!!selectedUpload} onOpenChange={(open) => !open && setSelectedUpload(null)}>
-        <DialogContent className="max-w-2xl max-w-[calc(100vw-2rem)]">
+        <DialogContent className="max-w-[calc(100vw-2rem)]">
           <DialogHeader>
             <DialogTitle>{selectedUpload?.name}</DialogTitle>
             <DialogDescription>Detalhes do material enviado</DialogDescription>
@@ -458,3 +459,4 @@ export default function UploadsPage() {
     </div>
   )
 }
+export default withAdminAuth(UploadsPage)

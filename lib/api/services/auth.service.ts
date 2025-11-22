@@ -6,89 +6,73 @@ import type {
   AuthResponse,
   ResetPasswordResponse,
   ApiResponse,
+  User,
 } from "../types"
 
 class AuthService {
   private readonly BASE_PATH = "/auth"
+  private currentUserCache: User | null = null
+  private currentUserPromise: Promise<User> | null = null
 
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    if (credentials.email === "example@example.com" && credentials.password === "123456") {
-      const mockAuthResponse: AuthResponse = {
-        user: {
-          id: "1",
-          name: "Usuário Teste",
-          email: credentials.email,
-          isAdmin: false,
-        },
-        token: "mock-jwt-token-" + Date.now(),
-      }
-      this.saveAuthData(mockAuthResponse)
-      return mockAuthResponse
-    }
-
-    if (credentials.email === "admin@admin.com" && credentials.password === "123456") {
-      const mockAuthResponse: AuthResponse = {
-        user: {
-          id: "admin-1",
-          name: "Administrador",
-          email: credentials.email,
-          isAdmin: true,
-        },
-        token: "mock-jwt-token-admin-" + Date.now(),
-      }
-      this.saveAuthData(mockAuthResponse)
-      return mockAuthResponse
-    }
-
     const response = await apiClient.post<ApiResponse<AuthResponse>>(`${this.BASE_PATH}/login`, credentials)
-
-    if (response.data) {
-      this.saveAuthData(response.data)
-    }
-
+    // Limpar cache ao fazer login
+    this.currentUserCache = null
+    this.currentUserPromise = null
     return response.data!
   }
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
     const response = await apiClient.post<ApiResponse<AuthResponse>>(`${this.BASE_PATH}/register`, userData)
-
-    if (response.data) {
-      this.saveAuthData(response.data)
-    }
-
+    // Limpar cache ao fazer registro
+    this.currentUserCache = null
+    this.currentUserPromise = null
     return response.data!
   }
 
   async forgotPassword(data: ForgotPasswordRequest): Promise<ResetPasswordResponse> {
-    const response = await apiClient.post<ApiResponse<ResetPasswordResponse>>(`${this.BASE_PATH}/forgot-password`, data)
+    const response = await apiClient.post<ApiResponse<ResetPasswordResponse>>(
+      `${this.BASE_PATH}/forgot-password`,
+      data
+    )
     return response.data!
   }
 
   async logout(): Promise<void> {
-    try {
-      await apiClient.post(`${this.BASE_PATH}/logout`)
-    } finally {
-      this.clearAuthData()
+    await apiClient.post(`${this.BASE_PATH}/logout`)
+    // Limpar cache ao fazer logout
+    this.currentUserCache = null
+    this.currentUserPromise = null
+  }
+
+  async getCurrentUser(): Promise<User> {
+    // Se já temos cache, retornar
+    if (this.currentUserCache) {
+      return this.currentUserCache
     }
+
+    // Se já existe uma requisição em andamento, reutilizar
+    if (this.currentUserPromise) {
+      return this.currentUserPromise
+    }
+
+    // Criar nova requisição
+    this.currentUserPromise = apiClient.get<User>(`${this.BASE_PATH}/me`).then((user) => {
+      this.currentUserCache = user
+      this.currentUserPromise = null
+      return user
+    }).catch((error) => {
+      this.currentUserPromise = null
+      throw error
+    })
+
+    return this.currentUserPromise
   }
 
-  isAuthenticated(): boolean {
-    return !!localStorage.getItem("auth_token")
-  }
-
-  getCurrentUser(): AuthResponse["user"] | null {
-    const userStr = localStorage.getItem("user")
-    return userStr ? JSON.parse(userStr) : null
-  }
-
-  private saveAuthData(authData: AuthResponse): void {
-    localStorage.setItem("auth_token", authData.token)
-    localStorage.setItem("user", JSON.stringify(authData.user))
-  }
-
-  private clearAuthData(): void {
-    localStorage.removeItem("auth_token")
-    localStorage.removeItem("user")
+  // Método para limpar cache manualmente se necessário
+  clearCache(): void {
+    this.currentUserCache = null
+    this.currentUserPromise = null
   }
 }
 

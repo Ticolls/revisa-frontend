@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { Menu, X, Home, BookOpen, FileQuestion, Upload, LogOut, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { authService } from "@/lib/api/services/auth.service"
+import { useAuth } from "@/lib/hooks/use-auth"
 
 const navigation = [
   { name: "Início", href: "/home", icon: Home },
@@ -19,10 +20,13 @@ export function MobileNav() {
   const [isOpen, setIsOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
+  const { setUser } = useAuth()
 
   const handleLogout = async () => {
     try {
       await authService.logout()
+      // Limpar o contexto
+      setUser(null)
       router.push("/login")
     } catch (error) {
       console.error("Erro ao fazer logout:", error)

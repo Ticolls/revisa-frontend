@@ -9,7 +9,7 @@ import type {
 } from "../types"
 
 class UserService {
-  private readonly BASE_PATH = "/user"
+  private readonly BASE_PATH = "/users"
 
   async getCurrentUser(): Promise<User> {
     const response = await apiClient.get<ApiResponse<User>>(`${this.BASE_PATH}/me`)
@@ -17,7 +17,7 @@ class UserService {
   }
 
   async updateUser(data: UpdateUserRequest): Promise<User> {
-    const response = await apiClient.patch<ApiResponse<User>>(`${this.BASE_PATH}/me`, data)
+    const response = await apiClient.put<ApiResponse<User>>(`${this.BASE_PATH}/me`, data)
     return response.data!
   }
 
@@ -37,9 +37,6 @@ class UserService {
 
   async deleteAccount(): Promise<void> {
     await apiClient.delete<ApiResponse<void>>(`${this.BASE_PATH}/me`)
-    // Clear auth data after account deletion
-    localStorage.removeItem("auth_token")
-    localStorage.removeItem("user")
   }
 }
 

@@ -9,10 +9,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AuthLayout } from "@/components/auth/auth-layout"
-import { authService } from "@/lib/api"
 import { handleApiError } from "@/lib/api/errors"
 import { validateForgotPasswordForm } from "@/lib/validations/auth"
 import { Loader2, AlertCircle, CheckCircle2, ArrowLeft } from "lucide-react"
+import authService from "@/lib/api/services/auth.service"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
