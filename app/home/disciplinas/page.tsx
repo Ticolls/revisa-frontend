@@ -1,96 +1,168 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, BookOpen, Heart, FileText, X } from "lucide-react"
+import { Search, BookOpen, Heart, FileText, X, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { withAuth } from "@/lib/auth/protected-route"
+import { disciplineService } from "@/lib/api/services/discipline.service"
+import { toast } from "sonner"
+
+interface DisciplineWithFavorite {
+  id: string
+  code: string
+  name: string
+  description?: string
+  semester: number
+  isFavorite: boolean
+  _count?: {
+    materials: number
+  }
+}
+
+const ITEMS_PER_PAGE = 12
 
 function DisciplinesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [semesterFilter, setSemesterFilter] = useState<string>("all")
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const [sortBy, setSortBy] = useState<string>("name")
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [disciplines, setDisciplines] = useState<DisciplineWithFavorite[]>([])
+  const [totalDisciplines, setTotalDisciplines] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageJumpInput, setPageJumpInput] = useState("")
 
-  const [disciplines, setDisciplines] = useState([
-    { id: 1, code: "MATA01", name: "Geometria Analítica", semester: "1º", materials: 12, isFavorite: false },
-    { id: 2, code: "MATA02", name: "Cálculo A", semester: "1º", materials: 28, isFavorite: false },
-    {
-      id: 3,
-      code: "MATA37",
-      name: "Introdução à Lógica de Programação",
-      semester: "1º",
-      materials: 35,
-      isFavorite: true,
-    },
-    {
-      id: 4,
-      code: "MATA38",
-      name: "Projetos e Desenho de Algoritmos",
-      semester: "2º",
-      materials: 22,
-      isFavorite: false,
-    },
-    {
-      id: 5,
-      code: "MATA40",
-      name: "Estruturas de Dados e Algoritmos I",
-      semester: "2º",
-      materials: 42,
-      isFavorite: true,
-    },
-    { id: 6, code: "MATA42", name: "Matemática Discreta I", semester: "2º", materials: 18, isFavorite: false },
-    {
-      id: 7,
-      code: "MATA44",
-      name: "Estruturas de Dados e Algoritmos II",
-      semester: "3º",
-      materials: 31,
-      isFavorite: false,
-    },
-    { id: 8, code: "MATA49", name: "Programação de Software Básico", semester: "3º", materials: 15, isFavorite: false },
-    {
-      id: 9,
-      code: "MATA55",
-      name: "Programação Orientada a Objetos",
-      semester: "3º",
-      materials: 38,
-      isFavorite: false,
-    },
-    { id: 10, code: "MATA60", name: "Banco de Dados", semester: "4º", materials: 27, isFavorite: true },
-    { id: 11, code: "MATA62", name: "Engenharia de Software I", semester: "4º", materials: 24, isFavorite: true },
-    { id: 12, code: "MATA63", name: "Engenharia de Software II", semester: "5º", materials: 19, isFavorite: false },
-    { id: 13, code: "MATA64", name: "Inteligência Artificial", semester: "5º", materials: 33, isFavorite: false },
-    { id: 14, code: "MATA68", name: "Computação Gráfica", semester: "6º", materials: 21, isFavorite: false },
-  ])
+  // Buscar disciplinas do backend
+  useEffect(() => {
+    const fetchDisciplines = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
 
-  let filteredDisciplines = disciplines.filter((discipline) => {
-    const matchesSearch =
-      discipline.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      discipline.code.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesSemester = semesterFilter === "all" || discipline.semester === semesterFilter
-    const matchesFavorite = !showFavoritesOnly || discipline.isFavorite
-    return matchesSearch && matchesSemester && matchesFavorite
-  })
+        const filters = {
+          page: currentPage,
+          limit: ITEMS_PER_PAGE,
+          search: searchTerm || undefined,
+          semester: semesterFilter !== "all" ? Number.parseInt(semesterFilter) : undefined,
+          onlyFavorites: showFavoritesOnly || undefined,
+        }
 
-  // Ordenação
-  filteredDisciplines = [...filteredDisciplines].sort((a, b) => {
-    if (sortBy === "name") return a.name.localeCompare(b.name)
-    if (sortBy === "code") return a.code.localeCompare(b.code)
-    if (sortBy === "materials") return b.materials - a.materials
-    return 0
-  })
+        const response = await disciplineService.getDisciplines(filters)
+        
+        // Transformar resposta da API para o formato esperado
+        const formattedDisciplines: DisciplineWithFavorite[] = response.disciplines.map((disc: any) => ({
+          id: disc.id,
+          code: disc.code,
+          name: disc.name,
+          description: disc.description,
+          semester: disc.semester,
+          isFavorite: disc.isFavorite || false,
+          _count: disc._count
+        }))
+        
+        setDisciplines(formattedDisciplines)
+        setTotalDisciplines(response.total)
+      } catch (err) {
+        console.error("Erro ao carregar disciplinas:", err)
+        setError("Não foi possível carregar as disciplinas")
+        toast.error("Erro ao carregar disciplinas")
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-  const toggleFavorite = (id: number) => {
-    setDisciplines((prevDisciplines) =>
-      prevDisciplines.map((discipline) =>
-        discipline.id === id ? { ...discipline, isFavorite: !discipline.isFavorite } : discipline,
-      ),
-    )
+    fetchDisciplines()
+  }, [currentPage, searchTerm, semesterFilter, showFavoritesOnly])
+
+  const sortedDisciplines = useMemo(() => {
+    return [...disciplines].sort((a, b) => {
+      if (sortBy === "name") return a.name.localeCompare(b.name)
+      if (sortBy === "code") return a.code.localeCompare(b.code)
+      if (sortBy === "materials") {
+        const aMaterials = a._count?.materials || 0
+        const bMaterials = b._count?.materials || 0
+        return bMaterials - aMaterials
+      }
+      return 0
+    })
+  }, [disciplines, sortBy])
+
+  const filteredDisciplines = sortedDisciplines
+
+  const totalPages = Math.ceil(totalDisciplines / ITEMS_PER_PAGE)
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = []
+    const maxVisible = 5
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i)
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i)
+        }
+        pages.push("...")
+        pages.push(totalPages)
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1)
+        pages.push("...")
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i)
+        }
+      } else {
+        pages.push(1)
+        pages.push("...")
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pages.push(i)
+        }
+        pages.push("...")
+        pages.push(totalPages)
+      }
+    }
+
+    return pages
+  }
+
+  const handlePageJump = () => {
+    const pageNum = Number.parseInt(pageJumpInput)
+    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+      setCurrentPage(pageNum)
+      setPageJumpInput("")
+    }
+  }
+
+  const toggleFavorite = async (id: string, currentIsFavorite: boolean) => {
+    try {
+      // Atualizar UI otimisticamente
+      setDisciplines((prevDisciplines) =>
+        prevDisciplines.map((discipline) =>
+          discipline.id === id ? { ...discipline, isFavorite: !currentIsFavorite } : discipline,
+        ),
+      )
+      
+      // Chamar API
+      await disciplineService.toggleFavorite(id, currentIsFavorite)
+      
+      toast.success(currentIsFavorite ? "Removido dos favoritos" : "Adicionado aos favoritos")
+    } catch (error) {
+      // Reverter mudança em caso de erro
+      setDisciplines((prevDisciplines) =>
+        prevDisciplines.map((discipline) =>
+          discipline.id === id ? { ...discipline, isFavorite: currentIsFavorite } : discipline,
+        ),
+      )
+      toast.error("Erro ao atualizar favorito")
+      console.error(error)
+    }
   }
 
   const activeFiltersCount = [semesterFilter !== "all", showFavoritesOnly, sortBy !== "name"].filter(Boolean).length
@@ -99,6 +171,7 @@ function DisciplinesPage() {
     setSemesterFilter("all")
     setShowFavoritesOnly(false)
     setSortBy("name")
+    setCurrentPage(1)
   }
 
   return (
@@ -130,7 +203,9 @@ function DisciplinesPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total de Materiais</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-foreground">{disciplines.reduce((acc, d) => acc + d.materials, 0)}</p>
+            <p className="text-2xl font-bold text-foreground">
+              {disciplines.reduce((acc, d) => acc + (d._count?.materials || 0), 0)}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -165,12 +240,12 @@ function DisciplinesPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os semestres</SelectItem>
-              <SelectItem value="1º">1º Semestre</SelectItem>
-              <SelectItem value="2º">2º Semestre</SelectItem>
-              <SelectItem value="3º">3º Semestre</SelectItem>
-              <SelectItem value="4º">4º Semestre</SelectItem>
-              <SelectItem value="5º">5º Semestre</SelectItem>
-              <SelectItem value="6º">6º Semestre</SelectItem>
+              <SelectItem value="1">1º Semestre</SelectItem>
+              <SelectItem value="2">2º Semestre</SelectItem>
+              <SelectItem value="3">3º Semestre</SelectItem>
+              <SelectItem value="4">4º Semestre</SelectItem>
+              <SelectItem value="5">5º Semestre</SelectItem>
+              <SelectItem value="6">6º Semestre</SelectItem>
             </SelectContent>
           </Select>
 
@@ -229,53 +304,176 @@ function DisciplinesPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredDisciplines.map((discipline) => (
-          <Link key={discipline.id} href={`/home/disciplinas/${discipline.code.toLowerCase()}`}>
-            <Card className="hover:border-primary transition-colors group cursor-pointer h-full flex flex-col">
-              <CardHeader className="flex-grow">
-                <div className="flex items-start justify-between mb-2">
-                  <span className="text-xs font-mono font-semibold text-primary bg-primary/10 px-2 py-1 rounded">
-                    {discipline.code}
-                  </span>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 cursor-pointer hover:bg-muted"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      toggleFavorite(discipline.id)
-                    }}
-                  >
-                    <Heart
-                      className={`h-4 w-4 ${discipline.isFavorite ? "text-primary fill-primary" : "text-muted-foreground"}`}
-                    />
-                  </Button>
-                </div>
-                <CardTitle className="text-base group-hover:text-primary transition-colors line-clamp-2">
-                  {discipline.name}
-                </CardTitle>
-                <CardDescription>{discipline.semester} Semestre</CardDescription>
-              </CardHeader>
-              <CardContent className="mt-auto">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <FileText className="h-4 w-4" />
-                  <span>{discipline.materials} materiais</span>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Carregando disciplinas...</p>
+          </div>
+        </div>
+      )}
 
-      {filteredDisciplines.length === 0 && (
+      {/* Error State */}
+      {!isLoading && error && (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="mb-4 text-destructive">
+              <X className="w-12 h-12 mx-auto" />
+            </div>
+            <h2 className="text-xl font-semibold mb-2">Erro ao carregar disciplinas</h2>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>Tentar novamente</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Disciplines Grid */}
+      {!isLoading && !error && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredDisciplines.map((discipline) => (
+            <Link key={discipline.id} href={`/home/disciplinas/${discipline.code.toLowerCase()}`}>
+              <Card className="hover:border-primary transition-colors group cursor-pointer h-full flex flex-col">
+                <CardHeader className="flex-grow">
+                  <div className="flex items-start justify-between mb-2">
+                    <span className="text-xs font-mono font-semibold text-primary bg-primary/10 px-2 py-1 rounded">
+                      {discipline.code}
+                    </span>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 cursor-pointer hover:bg-muted"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        toggleFavorite(discipline.id, discipline.isFavorite)
+                      }}
+                    >
+                      <Heart
+                        className={`h-4 w-4 ${discipline.isFavorite ? "text-primary fill-primary" : "text-muted-foreground"}`}
+                      />
+                    </Button>
+                  </div>
+                  <CardTitle className="text-base group-hover:text-primary transition-colors line-clamp-2">
+                    {discipline.name}
+                  </CardTitle>
+                  <CardDescription>{discipline.semester} Semestre</CardDescription>
+                </CardHeader>
+                <CardContent className="mt-auto">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <FileText className="h-4 w-4" />
+                    <span>{discipline._count?.materials || 0} materiais</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && !error && filteredDisciplines.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
             <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">Nenhuma disciplina encontrada</p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Pagination */}
+      {!isLoading && !error && filteredDisciplines.length > 0 && totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-sm text-muted-foreground">
+            Mostrando {(currentPage - 1) * ITEMS_PER_PAGE + 1} a{" "}
+            {Math.min(currentPage * ITEMS_PER_PAGE, totalDisciplines)} de {totalDisciplines} disciplinas
+          </p>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(1)}
+              className="cursor-pointer h-9 w-9"
+              title="Primeira página"
+            >
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="cursor-pointer h-9 w-9"
+              title="Página anterior"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            <div className="flex items-center gap-1">
+              {getPageNumbers().map((page, idx) =>
+                page === "..." ? (
+                  <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">
+                    ...
+                  </span>
+                ) : (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="icon"
+                    onClick={() => setCurrentPage(page as number)}
+                    className="cursor-pointer h-9 w-9"
+                  >
+                    {page}
+                  </Button>
+                ),
+              )}
+            </div>
+
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="cursor-pointer h-9 w-9"
+              title="Próxima página"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(totalPages)}
+              className="cursor-pointer h-9 w-9"
+              title="Última página"
+            >
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+
+            <div className="hidden sm:flex items-center gap-2 ml-4">
+              <span className="text-sm text-muted-foreground">Ir para:</span>
+              <Input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={pageJumpInput}
+                onChange={(e) => setPageJumpInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handlePageJump()
+                  }
+                }}
+                className="w-16 h-9"
+                placeholder={currentPage.toString()}
+              />
+              <Button variant="outline" size="sm" onClick={handlePageJump} className="cursor-pointer h-9">
+                Ir
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

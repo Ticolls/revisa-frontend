@@ -23,8 +23,8 @@ class AuthService {
   }
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
-    const response = await apiClient.post<ApiResponse<AuthResponse>>(`${this.BASE_PATH}/register`, userData)
-    // Limpar cache ao fazer registro
+    const response = await apiClient.post<ApiResponse<AuthResponse>>(`/users/register`, userData)
+    console.log(response)
     this.currentUserCache = null
     this.currentUserPromise = null
     return response.data!

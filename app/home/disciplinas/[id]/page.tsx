@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -42,42 +42,33 @@ import {
   ChevronsLeft,
   ChevronsRight,
   HardDrive,
+  Loader2,
+  Heart,
 } from "lucide-react"
 import Link from "next/link"
 import { withAuth } from "@/lib/auth/protected-route"
-
-// Mock data
-const disciplinesData: Record<string, any> = {
-  mata37: {
-    code: "MATA37",
-    name: "Introdução à Lógica de Programação",
-    semester: "1º",
-    description: "Fundamentos de lógica de programação, algoritmos e estruturas básicas de controle.",
-    totalMaterials: 35,
-  },
-  mata40: {
-    code: "MATA40",
-    name: "Estruturas de Dados e Algoritmos I",
-    semester: "2º",
-    description: "Estudo de estruturas de dados fundamentais e análise de algoritmos.",
-    totalMaterials: 42,
-  },
-  mata60: {
-    code: "MATA60",
-    name: "Banco de Dados",
-    semester: "4º",
-    description: "Modelagem, projeto e implementação de sistemas de banco de dados.",
-    totalMaterials: 27,
-  },
-}
+import { disciplineService } from "@/lib/api/services/discipline.service"
+import { materialService } from "@/lib/api/services/material.service"
+import type { Discipline, Material, MaterialType } from "@/lib/api/types"
+import { toast } from "sonner"
 
 const materialTypes = [
   { value: "all", label: "Todos os tipos", icon: File },
-  { value: "prova", label: "Provas antigas", icon: FileText },
-  { value: "lista", label: "Listas de exercícios", icon: FileText },
-  { value: "resumo", label: "Resumo", icon: FileText },
-  { value: "slides", label: "Slides", icon: FileText },
+  { value: "EXAM", label: "Provas antigas", icon: FileText },
+  { value: "EXERCISE_SHEET", label: "Listas de exercícios", icon: FileText },
+  { value: "SUMMARY", label: "Resumo", icon: FileText },
+  { value: "SLIDE", label: "Slides", icon: FileText },
 ]
+
+const getTypeLabel = (type: MaterialType | string): string => {
+  const typeMap: Record<string, string> = {
+    EXAM: "Provas antigas",
+    EXERCISE_SHEET: "Listas de exercícios",
+    SUMMARY: "Resumo",
+    SLIDE: "Slides",
+  }
+  return typeMap[type] || "Arquivo"
+}
 
 const sortOptions = [
   { value: "recent", label: "Mais recentes" },
@@ -85,189 +76,93 @@ const sortOptions = [
   { value: "name", label: "Nome (A-Z)" },
 ]
 
-// Mock materials
-const generateMaterials = (disciplineCode: string) => {
-  const materials = [
-    {
-      id: 1,
-      title: "Introdução à Disciplina - Aula 01",
-      type: "slides",
-      description: "Slides da primeira aula apresentando os conceitos fundamentais",
-      uploadDate: "2024-03-15",
-      author: "Prof. João Silva",
-      professor: "Prof. João Silva",
-      downloads: 145,
-      isFavorite: true,
-      fileSize: "2.5 MB",
-      gabarito: null,
-      isOwner: false,
-    },
-    {
-      id: 2,
-      title: "Lista de Exercícios 01",
-      type: "lista",
-      description: "Primeira lista de exercícios sobre conceitos básicos",
-      uploadDate: "2024-03-18",
-      author: "Monitor Pedro",
-      professor: undefined,
-      downloads: 98,
-      isFavorite: false,
-      fileSize: "1.2 MB",
-      gabarito: { name: "Gabarito Lista 01.pdf", size: "450 KB" },
-      isOwner: false,
-    },
-    {
-      id: 3,
-      title: "Resumo Completo - Parte 1",
-      type: "resumo",
-      description: "Material completo cobrindo os primeiros 4 capítulos",
-      uploadDate: "2024-03-20",
-      author: "Você",
-      professor: "Prof. João Silva",
-      downloads: 203,
-      isFavorite: true,
-      fileSize: "8.7 MB",
-      gabarito: null,
-      isOwner: true,
-    },
-    {
-      id: 4,
-      title: "Prova 2023.1",
-      type: "prova",
-      description: "Prova do semestre 2023.1 com gabarito",
-      uploadDate: "2024-03-25",
-      author: "Aluno Carlos",
-      professor: "Prof. Maria Santos",
-      downloads: 312,
-      isFavorite: true,
-      fileSize: "856 KB",
-      gabarito: { name: "Gabarito Prova 2023.1.pdf", size: "320 KB" },
-      isOwner: false,
-    },
-    {
-      id: 5,
-      title: "Slides Aula 02 - Estruturas Básicas",
-      type: "slides",
-      description: "Material da segunda aula sobre estruturas básicas",
-      uploadDate: "2024-03-30",
-      author: "Prof. João Silva",
-      professor: "Prof. João Silva",
-      downloads: 134,
-      isFavorite: false,
-      fileSize: "3.1 MB",
-      gabarito: null,
-      isOwner: false,
-    },
-    {
-      id: 6,
-      title: "Lista de Exercícios 02",
-      type: "lista",
-      description: "Segunda lista focada em estruturas de controle",
-      uploadDate: "2024-04-02",
-      author: "Você",
-      professor: undefined,
-      downloads: 87,
-      isFavorite: true,
-      fileSize: "1.5 MB",
-      gabarito: { name: "Gabarito Lista 02.pdf", size: "380 KB" },
-      isOwner: true,
-    },
-    {
-      id: 7,
-      title: "Resumo para Prova",
-      type: "resumo",
-      description: "Resumo dos principais tópicos para a primeira prova",
-      uploadDate: "2024-04-05",
-      author: "Aluno Rafael",
-      professor: undefined,
-      downloads: 256,
-      isFavorite: true,
-      fileSize: "4.3 MB",
-      gabarito: null,
-      isOwner: false,
-    },
-    {
-      id: 8,
-      title: "Prova 2022.2",
-      type: "prova",
-      description: "Prova do semestre 2022.2 com resolução comentada",
-      uploadDate: "2024-04-08",
-      author: "Aluna Beatriz",
-      professor: "Prof. Carlos Oliveira",
-      downloads: 289,
-      isFavorite: false,
-      fileSize: "1.1 MB",
-      gabarito: { name: "Gabarito Prova 2022.2.pdf", size: "520 KB" },
-      isOwner: false,
-    },
-    {
-      id: 9,
-      title: "Slides Aula 03 - Algoritmos",
-      type: "slides",
-      description: "Apresentação sobre algoritmos e complexidade",
-      uploadDate: "2024-04-12",
-      author: "Prof. João Silva",
-      professor: "Prof. João Silva",
-      downloads: 142,
-      isFavorite: false,
-      fileSize: "2.8 MB",
-      gabarito: null,
-      isOwner: false,
-    },
-  ]
-
-  return materials
-}
-
-const ITEMS_PER_PAGE = 6
+const ITEMS_PER_PAGE = 12
 
 function DisciplinePage() {
   const params = useParams()
-  const disciplineId = params.id as string
+  const disciplineCode = params.id as string
 
-  const discipline = disciplinesData[disciplineId]
+  const [discipline, setDiscipline] = useState<Discipline | null>(null)
+  const [isLoadingDiscipline, setIsLoadingDiscipline] = useState(true)
+  
+  const [materials, setMaterials] = useState<Material[]>([])
+  const [totalMaterials, setTotalMaterials] = useState(0)
+  const [isLoadingMaterials, setIsLoadingMaterials] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const [searchQuery, setSearchQuery] = useState("")
   const [materialTypeFilter, setMaterialTypeFilter] = useState("all")
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const [sortBy, setSortBy] = useState("recent")
   const [currentPage, setCurrentPage] = useState(1)
-  const [favorites, setFavorites] = useState<Set<number>>(new Set([1, 3, 5, 8, 9]))
+
   const [reportDialogOpen, setReportDialogOpen] = useState(false)
-  const [materialToReport, setMaterialToReport] = useState<number | null>(null)
+  const [materialToReport, setMaterialToReport] = useState<string | null>(null)
   const [reportReason, setReportReason] = useState("")
   const [pageJumpInput, setPageJumpInput] = useState("")
-  const [selectedMaterial, setSelectedMaterial] = useState<any | null>(null)
+  const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null)
   const [materialDetailsOpen, setMaterialDetailsOpen] = useState(false)
+  const [isReporting, setIsReporting] = useState(false)
+  const [isFavorite, setIsFavorite] = useState(false)
 
-  const allMaterials = generateMaterials(disciplineId)
-
-  const filteredAndSortedMaterials = useMemo(() => {
-    let filtered = allMaterials
-
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(
-        (m) =>
-          m.title.toLowerCase().includes(query) ||
-          m.description.toLowerCase().includes(query) ||
-          m.author.toLowerCase().includes(query),
-      )
+  useEffect(() => {
+    const fetchDiscipline = async () => {
+      try {
+        setIsLoadingDiscipline(true)
+        const data = await disciplineService.getDisciplineByCode(disciplineCode)
+        setDiscipline(data)
+        setIsFavorite(data.isFavorite)
+      } catch (err) {
+        console.error("Erro ao carregar disciplina:", err)
+        toast.error("Erro ao carregar informações da disciplina")
+      } finally {
+        setIsLoadingDiscipline(false)
+      }
     }
 
-    // Filter by type
-    if (materialTypeFilter !== "all") {
-      filtered = filtered.filter((m) => m.type === materialTypeFilter)
+    fetchDiscipline()
+  }, [disciplineCode])
+
+  useEffect(() => {
+    const fetchMaterials = async () => {
+      if (!discipline) {
+        return
+      }
+      try {
+        setIsLoadingMaterials(true)
+        setError(null)
+
+        const filters: any = {
+          page: currentPage,
+          limit: ITEMS_PER_PAGE,
+        }
+
+        if (searchQuery.trim()) {
+          filters.search = searchQuery.trim()
+        }
+
+        if (materialTypeFilter !== "all") {
+          filters.type = materialTypeFilter
+        }
+
+        const data = await materialService.getMaterials(discipline.id, filters)
+        setMaterials(data.materials)
+        setTotalMaterials(data.total)
+      } catch (err: any) {
+        console.error("Erro ao carregar materiais:", err)
+        setError(err.message || "Erro ao carregar materiais")
+        toast.error("Erro ao carregar materiais")
+      } finally {
+        setIsLoadingMaterials(false)
+      }
     }
 
-    // Filter by favorites
-    if (showFavoritesOnly) {
-      filtered = filtered.filter((m) => favorites.has(m.id))
-    }
+    fetchMaterials()
 
-    // Sort
-    const sorted = [...filtered].sort((a, b) => {
+  }, [discipline, currentPage, searchQuery, materialTypeFilter])
+
+  // Ordenação local dos materiais
+  const sortedMaterials = useMemo(() => {
+    const sorted = [...materials].sort((a, b) => {
       switch (sortBy) {
         case "downloads":
           return b.downloads - a.downloads
@@ -275,79 +170,94 @@ function DisciplinePage() {
           return a.title.localeCompare(b.title)
         case "recent":
         default:
-          return new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime()
+          return new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
       }
     })
 
     return sorted
-  }, [allMaterials, searchQuery, materialTypeFilter, showFavoritesOnly, sortBy, favorites])
+  }, [materials, sortBy])
 
   const clearFilters = () => {
     setSearchQuery("")
     setMaterialTypeFilter("all")
-    setShowFavoritesOnly(false)
     setSortBy("recent")
+    setCurrentPage(1)
   }
 
-  const hasActiveFilters =
-    searchQuery.trim() || materialTypeFilter !== "all" || showFavoritesOnly || sortBy !== "recent"
+  const hasActiveFilters = searchQuery.trim() || materialTypeFilter !== "all" || sortBy !== "recent"
 
-  const toggleFavorite = (materialId: number) => {
-    setFavorites((prev) => {
-      const newFavorites = new Set(prev)
-      if (newFavorites.has(materialId)) {
-        newFavorites.delete(materialId)
-      } else {
-        newFavorites.add(materialId)
+  const toggleDisciplineFavorite = async () => {
+    try {
+      if (!discipline) {
+        return
       }
-      return newFavorites
-    })
+      await disciplineService.toggleFavorite(discipline?.id, isFavorite)
+      setIsFavorite(!isFavorite)
+      toast.success(isFavorite ? "Disciplina removida dos favoritos" : "Disciplina adicionada aos favoritos")
+    } catch (err) {
+      console.error("Erro ao alternar favorito:", err)
+      toast.error("Erro ao atualizar favoritos")
+    }
   }
 
-  const handleDownload = (material: any) => {
-    console.log("[v0] Downloading material:", material.title)
-    // Simulate download
-    alert(`Download iniciado: ${material.title}`)
+  const handleDownload = async (material: Material) => {
+    try {
+      const url = await materialService.downloadMaterial(material.id)
+      window.open(url, "_blank")
+    } catch (err) {
+      console.error("Erro ao fazer download:", err)
+      toast.error("Erro ao fazer download do material")
+    }
   }
 
-  const handleReport = (materialId: number) => {
+  const handleDownloadAnswerKey = async (material: Material) => {
+    try {
+      const url = await materialService.downloadAnswerKey(material.id)
+      window.open(url, "_blank")
+      toast.success("Download do gabarito iniciado!")
+    } catch (err) {
+      console.error("Erro ao fazer download do gabarito:", err)
+      toast.error("Erro ao fazer download do gabarito")
+    }
+  }
+
+  const handleReport = (materialId: string) => {
     setMaterialToReport(materialId)
     setReportReason("")
     setReportDialogOpen(true)
   }
 
-  const confirmReport = () => {
+  const confirmReport = async () => {
     if (!reportReason.trim()) {
-      alert("Por favor, informe o motivo da denúncia.")
+      toast.error("Por favor, informe o motivo da denúncia.")
       return
     }
 
-    console.log("[v0] Reporting material:", materialToReport, "Reason:", reportReason)
-    alert("Material denunciado com sucesso. Nossa equipe irá analisar.")
-    setReportDialogOpen(false)
-    setMaterialToReport(null)
-    setReportReason("")
+    if (!materialToReport) return
+
+    try {
+      setIsReporting(true)
+      await materialService.reportMaterial(materialToReport, reportReason)
+      toast.success("Material denunciado com sucesso. Nossa equipe irá analisar.")
+      setReportDialogOpen(false)
+      setMaterialToReport(null)
+      setReportReason("")
+    } catch (err) {
+      console.error("Erro ao reportar material:", err)
+      toast.error("Erro ao reportar material")
+    } finally {
+      setIsReporting(false)
+    }
   }
 
-  const getTypeIcon = (type: string) => {
+  const getTypeIcon = (type: MaterialType | string) => {
     const typeData = materialTypes.find((t) => t.value === type)
     return typeData?.icon || File
   }
 
-  const getTypeLabel = (type: string) => {
-    const typeData = materialTypes.find((t) => t.value === type)
-    return typeData?.label || "Arquivo"
-  }
-
-  const paginatedMaterials = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
-    const endIndex = startIndex + ITEMS_PER_PAGE
-    return filteredAndSortedMaterials.slice(startIndex, endIndex)
-  }, [filteredAndSortedMaterials, currentPage])
-
   const totalPages = useMemo(() => {
-    return Math.ceil(filteredAndSortedMaterials.length / ITEMS_PER_PAGE)
-  }, [filteredAndSortedMaterials])
+    return Math.ceil(totalMaterials / ITEMS_PER_PAGE)
+  }, [totalMaterials])
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = []
@@ -392,15 +302,17 @@ function DisciplinePage() {
     }
   }
 
-  const openMaterialDetails = (material: any) => {
+  const openMaterialDetails = (material: Material) => {
     setSelectedMaterial(material)
     setMaterialDetailsOpen(true)
   }
 
-  const handleDownloadGabarito = (material: any) => {
-    console.log("[v0] Downloading gabarito:", material.gabarito.name)
-    // Simulate download
-    alert(`Download iniciado: ${material.gabarito.name}`)
+  if (isLoadingDiscipline) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   if (!discipline) {
@@ -437,23 +349,31 @@ function DisciplinePage() {
                   {discipline.code}
                 </Badge>
                 <CardTitle className="text-2xl">{discipline.name}</CardTitle>
-                <CardDescription>{discipline.description}</CardDescription>
+                <CardDescription>Semestre {discipline.semester}</CardDescription>
               </div>
+              <Button
+                variant={isFavorite ? "default" : "outline"}
+                size="icon"
+                onClick={toggleDisciplineFavorite}
+                className="cursor-pointer"
+              >
+                <Heart className={`h-4 w-4 ${isFavorite ? "fill-current" : ""}`} />
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Semestre</p>
-                <p className="text-lg font-semibold">{discipline.semester}</p>
+                <p className="text-lg font-semibold">{discipline.semester}º</p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Total de Materiais</p>
-                <p className="text-lg font-semibold">{filteredAndSortedMaterials.length}</p>
+                <p className="text-lg font-semibold">{totalMaterials}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Favoritados</p>
-                <p className="text-lg font-semibold">{favorites.size}</p>
+                <p className="text-sm text-muted-foreground">Resultados</p>
+                <p className="text-lg font-semibold">{materials.length}</p>
               </div>
             </div>
           </CardContent>
@@ -541,14 +461,33 @@ function DisciplinePage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {paginatedMaterials.map((material) => {
-          const TypeIcon = getTypeIcon(material.type)
+      {isLoadingMaterials && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      )}
 
-          return (
-            <Card
-              key={material.id}
-              className="hover:border-primary transition-colors cursor-pointer"
+      {!isLoadingMaterials && error && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-destructive mb-2">Erro ao carregar materiais</p>
+            <p className="text-sm text-muted-foreground mb-4">{error}</p>
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              Tentar novamente
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {!isLoadingMaterials && !error && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {sortedMaterials.map((material) => {
+            const TypeIcon = getTypeIcon(material.type)
+
+            return (
+              <Card
+                key={material.id}
+                className="hover:border-primary transition-colors cursor-pointer"
               onClick={() => openMaterialDetails(material)}
             >
               <CardHeader className="pb-3">
@@ -564,7 +503,7 @@ function DisciplinePage() {
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{new Date(material.uploadDate).toLocaleDateString("pt-BR")}</span>
+                    <span>{new Date(material.uploadedAt).toLocaleDateString("pt-BR")}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -575,10 +514,11 @@ function DisciplinePage() {
             </Card>
           )
         })}
-      </div>
+        </div>
+      )}
 
       {/* Empty State */}
-      {paginatedMaterials.length === 0 && (
+      {!isLoadingMaterials && !error && materials.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
             <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -594,12 +534,11 @@ function DisciplinePage() {
       )}
 
       {/* Pagination */}
-      {paginatedMaterials.length > 0 && totalPages > 1 && (
+      {!isLoadingMaterials && !error && materials.length > 0 && totalPages > 1 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
             Mostrando {(currentPage - 1) * ITEMS_PER_PAGE + 1} a{" "}
-            {Math.min(currentPage * ITEMS_PER_PAGE, filteredAndSortedMaterials.length)} de{" "}
-            {filteredAndSortedMaterials.length} materiais
+            {Math.min(currentPage * ITEMS_PER_PAGE, totalMaterials)} de {totalMaterials} materiais
           </p>
 
           <div className="flex items-center gap-2">
@@ -709,11 +648,18 @@ function DisciplinePage() {
             />
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer hover:bg-destructive/10 hover:text-destructive">
+            <AlertDialogCancel className="cursor-pointer hover:bg-destructive/10 hover:text-destructive" disabled={isReporting}>
               Cancelar
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmReport} className="cursor-pointer">
-              Confirmar Denúncia
+            <AlertDialogAction onClick={confirmReport} className="cursor-pointer" disabled={isReporting}>
+              {isReporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                "Confirmar Denúncia"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -741,7 +687,7 @@ function DisciplinePage() {
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <p className="text-sm">
-                        {new Date(selectedMaterial.uploadDate).toLocaleDateString("pt-BR", {
+                        {new Date(selectedMaterial.uploadedAt).toLocaleDateString("pt-BR", {
                           day: "2-digit",
                           month: "long",
                           year: "numeric",
@@ -762,7 +708,7 @@ function DisciplinePage() {
                     <p className="text-sm font-medium text-muted-foreground">Autor</p>
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm">{selectedMaterial.author}</p>
+                      <p className="text-sm">{selectedMaterial.authorName}</p>
                     </div>
                   </div>
 
@@ -770,7 +716,7 @@ function DisciplinePage() {
                     <p className="text-sm font-medium text-muted-foreground">Tamanho</p>
                     <div className="flex items-center gap-2">
                       <HardDrive className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm">{selectedMaterial.fileSize}</p>
+                      <p className="text-sm">{(selectedMaterial.fileSize / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
                   </div>
 
@@ -784,13 +730,13 @@ function DisciplinePage() {
                     </div>
                   )}
 
-                  {selectedMaterial.gabarito && (
+                  {selectedMaterial.answerKeyFileName && (
                     <div className="space-y-1 col-span-2">
                       <p className="text-sm font-medium text-muted-foreground">Gabarito Disponível</p>
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-green-600" />
                         <p className="text-sm font-medium text-green-600">
-                          {selectedMaterial.gabarito.name} ({selectedMaterial.gabarito.size})
+                          {selectedMaterial.answerKeyFileName}
                         </p>
                       </div>
                     </div>
@@ -814,11 +760,11 @@ function DisciplinePage() {
                   </Button>
                 )}
                 <div className="flex gap-2">
-                  {selectedMaterial.gabarito && (
+                  {selectedMaterial.answerKeyUrl && (
                     <Button
                       variant="outline"
                       className="cursor-pointer bg-transparent"
-                      onClick={() => handleDownloadGabarito(selectedMaterial)}
+                      onClick={() => handleDownloadAnswerKey(selectedMaterial)}
                     >
                       <Download className="h-4 w-4 mr-2" />
                       Baixar Gabarito

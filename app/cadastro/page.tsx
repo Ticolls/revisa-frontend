@@ -15,6 +15,7 @@ import { handleApiError } from "@/lib/api/errors"
 import { validateRegisterForm } from "@/lib/validations/auth"
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle2 } from "lucide-react"
 import { useAuth } from "@/lib/hooks/use-auth"
+import { toast } from "sonner"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -46,7 +47,6 @@ export default function RegisterPage() {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
 
-    // Atualizar indicador de força da senha
     if (name === "password") {
       setPasswordStrength({
         hasMinLength: value.length >= 8,
@@ -56,7 +56,6 @@ export default function RegisterPage() {
       })
     }
 
-    // Limpar erro do campo ao digitar
     if (errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev }
@@ -65,7 +64,6 @@ export default function RegisterPage() {
       })
     }
 
-    // Limpar erro da API
     if (apiError) {
       setApiError("")
     }
@@ -75,7 +73,6 @@ export default function RegisterPage() {
     e.preventDefault()
     setApiError("")
 
-    // Validar formulário
     const validationErrors = validateRegisterForm(
       formData.name,
       formData.email,
@@ -99,17 +96,12 @@ export default function RegisterPage() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        confirmPassword: formData.confirmPassword,
       })
 
-      // Buscar usuário completo após registro
-      const fullUser = await authService.getCurrentUser()
+      // Mostrar toast de sucesso
+      toast.success("Conta criada com sucesso! Faça login para continuar.")
       
-      // Atualizar o contexto com o usuário registrado
-      updateUser(fullUser)
-
-      // Redirecionar para home
-      router.push("/home")
+      router.push("/login")
     } catch (error) {
       const apiErrorData = handleApiError(error)
       setApiError(apiErrorData.message)

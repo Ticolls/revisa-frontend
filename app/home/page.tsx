@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,22 +13,53 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Heart, Download, BookOpen, FileText } from "lucide-react"
+import { Heart, Download, BookOpen, FileText, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { withAuth } from "@/lib/auth/protected-route"
 import { useAuth } from "@/lib/hooks/use-auth"
+import { disciplineService } from "@/lib/api/services/discipline.service"
+
+interface FavoriteDiscipline {
+  id: string
+  code: string
+  name: string
+  materials: number
+}
 
 function HomePage() {
   const { user } = useAuth()
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false)
   const [selectedDownload, setSelectedDownload] = useState<any>(null)
+  const [favoriteDisciplines, setFavoriteDisciplines] = useState<FavoriteDiscipline[]>([])
+  const [isLoadingFavorites, setIsLoadingFavorites] = useState(true)
 
+  // Buscar disciplinas favoritas
+  useEffect(() => {
+    const fetchFavorites = async () => {
+      try {
+        setIsLoadingFavorites(true)
+        const response = await disciplineService.getFavoriteDisciplines()
+        
+        // Transformar resposta da API para o formato esperado
+        const formatted: FavoriteDiscipline[] = response.map((disc: any) => ({
+          id: disc.id,
+          code: disc.code,
+          name: disc.name,
+          materials: disc._count?.materials || 0
+        }))
+        
+        // Pegar apenas as 3 primeiras
+        setFavoriteDisciplines(formatted.slice(0, 3))
+      } catch (err) {
+        console.error("Erro ao carregar disciplinas favoritas:", err)
+        // Não mostra toast aqui para não poluir a UI da home
+      } finally {
+        setIsLoadingFavorites(false)
+      }
+    }
 
-  const favoriteDisciplines = [
-    { id: 1, code: "MATA40", name: "Estruturas de Dados e Algoritmos I", materials: 42 },
-    { id: 2, code: "MATA60", name: "Banco de Dados", materials: 27 },
-    { id: 3, code: "MATA62", name: "Engenharia de Software I", materials: 24 },
-  ]
+    fetchFavorites()
+  }, [])
 
   const myRequests = [
     { id: 1, material: "Lista de Exercícios - Grafos", discipline: "MATA40", status: "Pendente", date: "Há 2 dias" },
@@ -77,31 +108,45 @@ function HomePage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {favoriteDisciplines.map((discipline) => (
-              <Link key={discipline.id} href={`/home/disciplinas/${discipline.code.toLowerCase()}`} className="group">
-                <Card className="hover:border-primary transition-colors h-full flex flex-col cursor-pointer">
-                  <CardHeader className="pb-3 flex-grow">
-                    <div className="flex items-start justify-between mb-2">
-                      <span className="text-xs font-mono font-semibold text-primary bg-primary/10 px-2 py-1 rounded">
-                        {discipline.code}
-                      </span>
-                      <Heart className="h-4 w-4 text-primary fill-primary" />
-                    </div>
-                    <CardTitle className="text-sm group-hover:text-primary transition-colors line-clamp-2">
-                      {discipline.name}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="mt-auto">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <FileText className="h-3 w-3" />
-                      <span>{discipline.materials} materiais</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
+          {isLoadingFavorites ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : favoriteDisciplines.length === 0 ? (
+            <div className="text-center py-12">
+              <Heart className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground mb-4">Você ainda não tem disciplinas favoritadas</p>
+              <Button asChild className="cursor-pointer">
+                <Link href="/home/disciplinas">Explorar disciplinas</Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {favoriteDisciplines.map((discipline) => (
+                <Link key={discipline.id} href={`/home/disciplinas/${discipline.code.toLowerCase()}`} className="group">
+                  <Card className="hover:border-primary transition-colors h-full flex flex-col cursor-pointer">
+                    <CardHeader className="pb-3 flex-grow">
+                      <div className="flex items-start justify-between mb-2">
+                        <span className="text-xs font-mono font-semibold text-primary bg-primary/10 px-2 py-1 rounded">
+                          {discipline.code}
+                        </span>
+                        <Heart className="h-4 w-4 text-primary fill-primary" />
+                      </div>
+                      <CardTitle className="text-sm group-hover:text-primary transition-colors line-clamp-2">
+                        {discipline.name}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="mt-auto">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <FileText className="h-3 w-3" />
+                        <span>{discipline.materials} materiais</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -19,15 +19,15 @@ export function ProtectedRoute({ children, requiredRole, fallbackUrl = "/login" 
   useEffect(() => {
     if (isLoading) return
 
-    // Não autenticado
+    console.log("ProtectedRoute: user =", user)
+
     if (!user) {
       router.push(fallbackUrl)
       return
     }
 
-    // Verificar role se necessário
     if (requiredRole && user.role !== requiredRole) {
-      router.push("/home") // Redirecionar para home se não tem permissão
+      router.push("/home") 
       return
     }
 

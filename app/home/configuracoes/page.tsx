@@ -1,12 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,12 +25,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Settings, Bell, User, Trash2, CheckCircle2 } from "lucide-react"
+import { Settings, Bell, User, Trash2, CheckCircle2, Palette } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { withAdminAuth } from "@/lib/auth/protected-route"
+import { withAuth } from "@/lib/auth/protected-route"
+import { useTheme } from "next-themes"
 
 function ConfigPage() {
   const router = useRouter()
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [name, setName] = useState("João Silva")
   const [email, setEmail] = useState("joao.silva@example.com")
@@ -35,6 +45,11 @@ function ConfigPage() {
   const [notifyRequestFulfilled, setNotifyRequestFulfilled] = useState(true)
   const [notifyNewRequest, setNotifyNewRequest] = useState(false)
   const [notifyFavoriteMaterial, setNotifyFavoriteMaterial] = useState(true)
+
+  // Evitar hidratação inconsistente
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleSaveProfile = () => {
     // Aqui você implementaria a lógica de salvar os dados do perfil
@@ -152,6 +167,40 @@ function ConfigPage() {
         </CardContent>
       </Card>
 
+      {/* Aparência */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5 text-primary" />
+            Aparência
+          </CardTitle>
+          <CardDescription>Personalize o tema da aplicação</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="theme-select">Tema</Label>
+            <Select
+              value={mounted ? theme : "system"}
+              onValueChange={(value) => setTheme(value)}
+            >
+              <SelectTrigger id="theme-select" className="w-full">
+                <SelectValue placeholder="Selecione um tema" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="system">Seguir padrão do sistema</SelectItem>
+                <SelectItem value="light">Claro</SelectItem>
+                <SelectItem value="dark">Escuro</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              {mounted && theme === "system" && "O tema seguirá as preferências do seu sistema operacional"}
+              {mounted && theme === "light" && "Modo claro ativado"}
+              {mounted && theme === "dark" && "Modo escuro ativado"}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Notificações */}
       <Card>
         <CardHeader>
@@ -243,4 +292,4 @@ function ConfigPage() {
     </div>
   )
 }
-export default withAdminAuth(ConfigPage)
+export default withAuth(ConfigPage)

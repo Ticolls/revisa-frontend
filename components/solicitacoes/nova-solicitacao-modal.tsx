@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -17,36 +17,106 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Send, Clock } from "lucide-react"
+import { toast } from "sonner"
+import { requestService } from "@/lib/api/services/request.service"
+import { disciplineService } from "@/lib/api/services/discipline.service"
+import { MaterialType, type Discipline } from "@/lib/api/types"
 
 interface NovaSolicitacaoModalProps {
   onSuccess?: () => void
 }
 
+const MATERIAL_TYPE_OPTIONS: { value: MaterialType; label: string }[] = [
+  { value: MaterialType.EXAM, label: "Prova antiga" },
+  { value: MaterialType.EXERCISE_SHEET, label: "Lista de exercícios" },
+  { value: MaterialType.SUMMARY, label: "Resumo" },
+  { value: MaterialType.SLIDE, label: "Slides" },
+]
+
 export function NovaSolicitacaoModal({ onSuccess }: NovaSolicitacaoModalProps) {
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoadingDisciplines, setIsLoadingDisciplines] = useState(false)
+  const [disciplines, setDisciplines] = useState<Discipline[]>([])
+
+  const [disciplineId, setDisciplineId] = useState<string>("")
+  const [materialType, setMaterialType] = useState<MaterialType | "">("")
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
+  const [professor, setProfessor] = useState("")
+
+  useEffect(() => {
+    const fetchDisciplines = async () => {
+      try {
+        setIsLoadingDisciplines(true)
+        const response = await disciplineService.getDisciplines({ limit: 100 })
+        setDisciplines(response.disciplines)
+      } catch (error) {
+        console.error("Erro ao carregar disciplinas:", error)
+        toast.error("Erro ao carregar disciplinas")
+      } finally {
+        setIsLoadingDisciplines(false)
+      }
+    }
+
+    fetchDisciplines()
+  }, [])
+
+  const resetForm = () => {
+    setDisciplineId("")
+    setMaterialType("")
+    setTitle("")
+    setDescription("")
+    setProfessor("")
+    setIsSubmitting(false)
+  }
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      resetForm()
+    }
+    setOpen(nextOpen)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSubmitting(true)
 
-    // Simular envio
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    if (!disciplineId || !title.trim() || !materialType) {
+      toast.error("Preencha disciplina, tipo e título da solicitação")
+      return
+    }
 
-    setIsSubmitting(false)
-    setOpen(false)
-    onSuccess?.()
+    try {
+      setIsSubmitting(true)
+      await requestService.createRequest({
+        disciplineId,
+        title: title.trim(),
+        description: description.trim() || undefined,
+        type: materialType as MaterialType,
+        professor: professor.trim() || undefined,
+      })
+
+      toast.success("Solicitação enviada com sucesso!")
+      resetForm()
+      setOpen(false)
+      onSuccess?.()
+    } catch (error) {
+      console.error("Erro ao criar solicitação:", error)
+      toast.error("Não foi possível enviar sua solicitação")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button className="cursor-pointer">
           <Plus className="h-4 w-4 sm:mr-2" />
           <span className="hidden sm:inline">Nova Solicitação</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nova Solicitação</DialogTitle>
           <DialogDescription>Preencha os dados do material que você está procurando</DialogDescription>
@@ -54,56 +124,63 @@ export function NovaSolicitacaoModal({ onSuccess }: NovaSolicitacaoModalProps) {
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="space-y-2">
             <Label htmlFor="modal-discipline">Disciplina</Label>
-            <Select>
+            <Select
+              value={disciplineId}
+              onValueChange={setDisciplineId}
+              disabled={isLoadingDisciplines || disciplines.length === 0}
+            >
               <SelectTrigger id="modal-discipline" className="cursor-pointer">
-                <SelectValue placeholder="Selecione a disciplina" />
+                <SelectValue
+                  placeholder={isLoadingDisciplines ? "Carregando..." : "Selecione a disciplina"}
+                />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="mata40" className="cursor-pointer">
-                  MATA40 - Estruturas de Dados
-                </SelectItem>
-                <SelectItem value="mata60" className="cursor-pointer">
-                  MATA60 - Banco de Dados
-                </SelectItem>
-                <SelectItem value="mata62" className="cursor-pointer">
-                  MATA62 - Engenharia de Software
-                </SelectItem>
-                <SelectItem value="mata64" className="cursor-pointer">
-                  MATA64 - Inteligência Artificial
-                </SelectItem>
+                {disciplines.map((disc) => (
+                  <SelectItem key={disc.id} value={disc.id} className="cursor-pointer">
+                    {disc.code} - {disc.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
+            {!isLoadingDisciplines && disciplines.length === 0 && (
+              <p className="text-xs text-muted-foreground">Nenhuma disciplina disponível no momento.</p>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="modal-material-type">Tipo de Material</Label>
-            <Select>
+            <Select value={materialType} onValueChange={(value) => setMaterialType(value as MaterialType)}>
               <SelectTrigger id="modal-material-type" className="cursor-pointer">
                 <SelectValue placeholder="Selecione o tipo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="lista" className="cursor-pointer">
-                  Lista de Exercícios
-                </SelectItem>
-                <SelectItem value="prova" className="cursor-pointer">
-                  Prova Antiga
-                </SelectItem>
-                <SelectItem value="slides" className="cursor-pointer">
-                  Slides
-                </SelectItem>
-                <SelectItem value="resumo" className="cursor-pointer">
-                  Resumo
-                </SelectItem>
-                <SelectItem value="outro" className="cursor-pointer">
-                  Outro
-                </SelectItem>
+                {MATERIAL_TYPE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value} className="cursor-pointer">
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="modal-title">Título do Material</Label>
-            <Input id="modal-title" placeholder="Ex: Lista de Exercícios 3" />
+            <Input
+              id="modal-title"
+              placeholder="Ex: Lista de Exercícios 3"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="modal-professor">Professor (opcional)</Label>
+            <Input
+              id="modal-professor"
+              placeholder="Ex: Prof. João Silva"
+              value={professor}
+              onChange={(e) => setProfessor(e.target.value)}
+            />
           </div>
 
           <div className="space-y-2">
@@ -112,6 +189,8 @@ export function NovaSolicitacaoModal({ onSuccess }: NovaSolicitacaoModalProps) {
               id="modal-description"
               placeholder="Adicione mais detalhes sobre o material que você procura..."
               rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
             />
           </div>
 
@@ -119,7 +198,7 @@ export function NovaSolicitacaoModal({ onSuccess }: NovaSolicitacaoModalProps) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setOpen(false)}
+              onClick={() => handleOpenChange(false)}
               className="flex-1 cursor-pointer hover:bg-destructive/10 hover:text-destructive"
             >
               Cancelar

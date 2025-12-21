@@ -20,7 +20,6 @@ export interface RegisterRequest {
   name: string
   email: string
   password: string
-  confirmPassword: string
 }
 
 export interface ForgotPasswordRequest {
@@ -88,16 +87,22 @@ export interface Discipline {
   id: string
   code: string
   name: string
-  semester: string
-  totalMaterials: number
-  isFavorited: boolean
+  description?: string
+  semester: number
+  totalMaterials?: number
+  isFavorite: boolean
   createdAt: string
   updatedAt: string
+  _count?: {
+    materials: number
+    requests: number
+    favorites: number
+  }
 }
 
 export interface DisciplineFilters {
   search?: string
-  semester?: string
+  semester?: number
   onlyFavorites?: boolean
   page?: number
   limit?: number
@@ -116,11 +121,18 @@ export interface PaginatedResponse<T> {
 }
 
 // Tipos de Material
+export enum MaterialType {
+  EXAM = "EXAM",
+  EXERCISE_SHEET = "EXERCISE_SHEET",
+  SUMMARY = "SUMMARY",
+  SLIDE = "SLIDE",
+}
+
 export interface Material {
   id: string
   title: string
   description: string
-  type: "Provas antigas" | "Listas de exercícios" | "Resumo" | "Slides"
+  type: MaterialType
   disciplineId: string
   disciplineName: string
   disciplineCode: string
@@ -148,7 +160,7 @@ export interface MaterialFilters {
 export interface CreateMaterialRequest {
   title: string
   description: string
-  type: "Provas antigas" | "Listas de exercícios" | "Resumo" | "Slides"
+  type: MaterialType
   disciplineId: string
   professor?: string
   file: File
@@ -186,12 +198,14 @@ export interface ReportFilters {
 export interface Request {
   id: string
   title: string
-  description: string
+  description?: string
+  type?: MaterialType
   disciplineId: string
   disciplineCode: string
   disciplineName: string
   authorId: string
   authorName: string
+  professor?: string
   status: "pending" | "fulfilled" | "rejected"
   createdAt: string
   updatedAt: string
@@ -214,8 +228,10 @@ export interface RequestFilters {
 
 export interface CreateRequestRequest {
   title: string
-  description: string
+  description?: string
   disciplineId: string
+  type: MaterialType
+  professor?: string
 }
 
 export interface FulfillRequestRequest {

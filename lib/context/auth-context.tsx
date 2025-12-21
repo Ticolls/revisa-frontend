@@ -22,7 +22,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [hasInitialized, setHasInitialized] = useState(false)
 
   const loadUser = async () => {
-    // Evitar múltiplas chamadas durante a inicialização
     if (hasInitialized) return
     
     try {
@@ -45,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = async () => {
     setIsLoading(true)
     setHasInitialized(false)
-    authService.clearCache() // Limpar cache antes de recarregar
+    authService.clearCache() 
     await loadUser()
   }
 

@@ -91,9 +91,6 @@ export function FileUploadZone({ onFileSelect, selectedFile, accept = ".pdf", pd
               </div>
               <h3 className="text-lg font-semibold mb-2">Arraste e solte seu arquivo aqui</h3>
               <p className="text-sm text-muted-foreground mb-4">ou clique para selecionar</p>
-              <Button type="button" variant="outline" size="sm" className="cursor-pointer bg-transparent">
-                Selecionar Arquivo
-              </Button>
               <p className="text-xs text-muted-foreground mt-4">
                 {pdfOnly
                   ? "Formato aceito: PDF (máx. 50MB)"
