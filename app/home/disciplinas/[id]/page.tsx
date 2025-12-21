@@ -733,12 +733,6 @@ function DisciplinePage() {
                   {selectedMaterial.answerKeyFileName && (
                     <div className="space-y-1 col-span-2">
                       <p className="text-sm font-medium text-muted-foreground">Gabarito Disponível</p>
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-green-600" />
-                        <p className="text-sm font-medium text-green-600">
-                          {selectedMaterial.answerKeyFileName}
-                        </p>
-                      </div>
                     </div>
                   )}
                 </div>

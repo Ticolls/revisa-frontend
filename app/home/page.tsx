@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { formatDistanceToNow } from "date-fns"
+import { ptBR } from "date-fns/locale"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,11 +15,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Heart, Download, BookOpen, FileText, Loader2 } from "lucide-react"
+import { Heart, Download as DownloadIcon, BookOpen, FileText, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { withAuth } from "@/lib/auth/protected-route"
 import { useAuth } from "@/lib/hooks/use-auth"
 import { disciplineService } from "@/lib/api/services/discipline.service"
+import { materialService } from "@/lib/api/services/material.service"
+import { requestService } from "@/lib/api/services/request.service"
+import type { Download, Request } from "@/lib/api/types"
+import { useToast } from "@/lib/hooks/use-toast"
 
 interface FavoriteDiscipline {
   id: string
@@ -28,19 +34,26 @@ interface FavoriteDiscipline {
 
 function HomePage() {
   const { user } = useAuth()
+  const { toast } = useToast()
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false)
-  const [selectedDownload, setSelectedDownload] = useState<any>(null)
+  const [selectedDownload, setSelectedDownload] = useState<Download | null>(null)
   const [favoriteDisciplines, setFavoriteDisciplines] = useState<FavoriteDiscipline[]>([])
   const [isLoadingFavorites, setIsLoadingFavorites] = useState(true)
+  const [recentDownloads, setRecentDownloads] = useState<Download[]>([])
+  const [isLoadingDownloads, setIsLoadingDownloads] = useState(true)
+  const [myRequests, setMyRequests] = useState<Request[]>([])
+  const [isLoadingRequests, setIsLoadingRequests] = useState(true)
+  const [isRedownloading, setIsRedownloading] = useState(false)
 
-  // Buscar disciplinas favoritas
+  const formatRelativeTime = (date: string) =>
+    formatDistanceToNow(new Date(date), { addSuffix: true, locale: ptBR })
+
   useEffect(() => {
     const fetchFavorites = async () => {
       try {
         setIsLoadingFavorites(true)
         const response = await disciplineService.getFavoriteDisciplines()
         
-        // Transformar resposta da API para o formato esperado
         const formatted: FavoriteDiscipline[] = response.map((disc: any) => ({
           id: disc.id,
           code: disc.code,
@@ -48,11 +61,9 @@ function HomePage() {
           materials: disc._count?.materials || 0
         }))
         
-        // Pegar apenas as 3 primeiras
         setFavoriteDisciplines(formatted.slice(0, 3))
       } catch (err) {
         console.error("Erro ao carregar disciplinas favoritas:", err)
-        // Não mostra toast aqui para não poluir a UI da home
       } finally {
         setIsLoadingFavorites(false)
       }
@@ -61,29 +72,84 @@ function HomePage() {
     fetchFavorites()
   }, [])
 
-  const myRequests = [
-    { id: 1, material: "Lista de Exercícios - Grafos", discipline: "MATA40", status: "Pendente", date: "Há 2 dias" },
-    { id: 2, material: "Slides sobre Normalização", discipline: "MATA60", status: "Atendida", date: "Há 5 dias" },
-    { id: 3, material: "Prova P1 - 2024.1", discipline: "MATA62", status: "Pendente", date: "Há 1 semana" },
-  ]
+  useEffect(() => {
+    if (!user) return
 
-  const recentDownloads = [
-    { id: 1, name: "Algoritmos de Ordenação", discipline: "MATA40", date: "Há 2 horas" },
-    { id: 2, name: "Normalização de Banco de Dados", discipline: "MATA60", date: "Há 5 horas" },
-    { id: 3, name: "Padrões de Projeto", discipline: "MATA62", date: "Há 1 dia" },
-    { id: 4, name: "Grafos - Teoria e Exercícios", discipline: "MATA40", date: "Há 2 dias" },
-  ]
+    const fetchRecentDownloads = async () => {
+      try {
+        setIsLoadingDownloads(true)
+        const downloads = await materialService.getRecentDownloads(4)
+        setRecentDownloads(downloads)
+      } catch (err) {
+        console.error("Erro ao carregar downloads recentes:", err)
+        setRecentDownloads([])
+      } finally {
+        setIsLoadingDownloads(false)
+      }
+    }
 
-  const handleDownloadClick = (download: any) => {
+    fetchRecentDownloads()
+  }, [user])
+
+  useEffect(() => {
+    if (!user) {
+      setMyRequests([])
+      setIsLoadingRequests(false)
+      return
+    }
+
+    const fetchMyRequests = async () => {
+      try {
+        setIsLoadingRequests(true)
+        const { data } = await requestService.getMyRequests(1, 4)
+        setMyRequests(data.slice(0, 4))
+      } catch (err) {
+        console.error("Erro ao carregar solicitações:", err)
+        setMyRequests([])
+      } finally {
+        setIsLoadingRequests(false)
+      }
+    }
+
+    fetchMyRequests()
+  }, [user])
+
+  const statusChipMap: Record<Request["status"], { label: string; className: string }> = {
+    pending: {
+      label: "Pendente",
+      className: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
+    },
+    fulfilled: {
+      label: "Atendida",
+      className: "bg-green-500/10 text-green-600 dark:text-green-400",
+    },
+    rejected: {
+      label: "Cancelada",
+      className: "bg-red-500/10 text-red-600 dark:text-red-400",
+    },
+  }
+
+  const handleDownloadClick = (download: Download) => {
     setSelectedDownload(download)
     setDownloadDialogOpen(true)
   }
 
-  const confirmDownload = () => {
-    console.log("[v0] Downloading material:", selectedDownload.name)
-    alert(`Download iniciado: ${selectedDownload.name}`)
-    setDownloadDialogOpen(false)
-    setSelectedDownload(null)
+  const confirmDownload = async () => {
+    if (!selectedDownload) return
+
+    try {
+      setIsRedownloading(true)
+      const url = await materialService.downloadMaterial(selectedDownload.materialId)
+      window.open(url, "_blank", "noopener,noreferrer")
+      toast.success("Download iniciado com sucesso.")
+    } catch (err) {
+      console.error("Erro ao iniciar download novamente:", err)
+      toast.error("Não foi possível iniciar o download. Tente novamente.")
+    } finally {
+      setIsRedownloading(false)
+      setDownloadDialogOpen(false)
+      setSelectedDownload(null)
+    }
   }
 
   return (
@@ -160,32 +226,44 @@ function HomePage() {
           </CardHeader>
           <CardContent className="flex-1 flex flex-col min-h-0">
             <div className="flex-1 overflow-y-auto space-y-3 pr-2" style={{ maxHeight: "320px" }}>
-              {myRequests.map((request) => (
-                <div
-                  key={request.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border transition-colors group"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                      {request.material}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs font-mono text-primary">{request.discipline}</span>
-                      <span className="text-xs text-muted-foreground">•</span>
-                      <span className="text-xs text-muted-foreground">{request.date}</span>
-                    </div>
-                  </div>
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ml-2 ${
-                      request.status === "Atendida"
-                        ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                        : "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
-                    }`}
-                  >
-                    {request.status}
-                  </span>
+              {isLoadingRequests ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
-              ))}
+              ) : myRequests.length === 0 ? (
+                <div className="text-center py-12">
+                  <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground mb-4">Você ainda não fez solicitações</p>
+                  <Button asChild className="cursor-pointer">
+                    <Link href="/home/solicitacoes/nova">Criar solicitação</Link>
+                  </Button>
+                </div>
+              ) : (
+                myRequests.map((request) => {
+                  const chip = statusChipMap[request.status]
+
+                  return (
+                    <div
+                      key={request.id}
+                      className="flex items-center justify-between p-3 rounded-lg border border-border transition-colors group"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                          {request.title}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                          <span className="font-mono text-primary">{request.disciplineCode}</span>
+                          <span>•</span>
+                          <span>{formatRelativeTime(request.createdAt)}</span>
+                        </div>
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ml-2 ${chip.className}`}>
+                        {chip.label}
+                      </span>
+                    </div>
+                  )
+                })
+              )}
             </div>
             <Button asChild className="w-full mt-4 flex-shrink-0 cursor-pointer">
               <Link href="/home/solicitacoes">Ver todas</Link>
@@ -202,25 +280,39 @@ function HomePage() {
           </CardHeader>
           <CardContent className="flex-1 flex flex-col min-h-0">
             <div className="flex-1 overflow-y-auto space-y-3 pr-2" style={{ maxHeight: "320px" }}>
-              {recentDownloads.map((download) => (
-                <div
-                  key={download.id}
-                  onClick={() => handleDownloadClick(download)}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors group cursor-pointer"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                      {download.name}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs font-mono text-primary">{download.discipline}</span>
-                      <span className="text-xs text-muted-foreground">•</span>
-                      <span className="text-xs text-muted-foreground">{download.date}</span>
-                    </div>
-                  </div>
-                  <Download className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2 self-center" />
+              {isLoadingDownloads ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
-              ))}
+              ) : recentDownloads.length === 0 ? (
+                <div className="text-center py-12">
+                  <DownloadIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground mb-4">Nenhum download recente encontrado</p>
+                  <Button asChild variant="outline" className="cursor-pointer">
+                    <Link href="/home/disciplinas">Explorar materiais</Link>
+                  </Button>
+                </div>
+              ) : (
+                recentDownloads.map((download) => (
+                  <div
+                    key={download.id}
+                    onClick={() => handleDownloadClick(download)}
+                    className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors group cursor-pointer"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                        {download.title}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
+                        <span className="font-mono text-primary">{download.disciplineCode}</span>
+                        <span className="text-muted-foreground">•</span>
+                        <span>{formatRelativeTime(download.downloadedAt)}</span>
+                      </div>
+                    </div>
+                    <DownloadIcon className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2 self-center" />
+                  </div>
+                ))
+              )}
             </div>
             <Button asChild className="w-full mt-4 flex-shrink-0 cursor-pointer">
               <Link href="/home/disciplinas">Explorar mais materiais</Link>
@@ -259,8 +351,12 @@ function HomePage() {
                 Você já baixou este material anteriormente. Deseja fazer o download novamente?
               </AlertDialogDescription>
               <div className="p-3 bg-muted rounded-lg">
-                <span className="font-medium text-foreground block">{selectedDownload?.name}</span>
-                <span className="text-sm text-muted-foreground mt-1 block">{selectedDownload?.discipline}</span>
+                <span className="font-medium text-foreground block">{selectedDownload?.title}</span>
+                <span className="text-sm text-muted-foreground mt-1 block">
+                  {selectedDownload
+                    ? `${selectedDownload.disciplineCode} • ${selectedDownload.fileName}`
+                    : ""}
+                </span>
               </div>
             </div>
           </AlertDialogHeader>
@@ -268,8 +364,12 @@ function HomePage() {
             <AlertDialogCancel className="cursor-pointer hover:bg-destructive/10 hover:text-destructive">
               Cancelar
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDownload} className="cursor-pointer">
-              Baixar
+            <AlertDialogAction
+              onClick={confirmDownload}
+              className="cursor-pointer"
+              disabled={isRedownloading}
+            >
+              {isRedownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Baixar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

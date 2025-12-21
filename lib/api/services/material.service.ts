@@ -91,22 +91,15 @@ class MaterialService {
     return response.data!
   }
 
-  // TODO: Implementar endpoint de recent downloads no backend
-  // O backend atualmente não tem tabela de Download
   async getRecentDownloads(limit?: number): Promise<Download[]> {
-    // const params = new URLSearchParams()
-    // if (limit) params.append("limit", limit.toString())
+    const params = new URLSearchParams()
+    if (limit) params.append("limit", limit.toString())
 
-    // const queryString = params.toString()
-    // const endpoint = queryString
-    //   ? `${this.BASE_PATH}/recent-downloads?${queryString}`
-    //   : `${this.BASE_PATH}/recent-downloads`
+    const queryString = params.toString()
+    const endpoint = queryString ? `/recent-download?${queryString}` : `/recent-download`
 
-    // const response = await apiClient.get<ApiResponse<Download[]>>(endpoint)
-    // return response.data!
-    
-    // Retornar array vazio por enquanto
-    return []
+    const response = await apiClient.get<ApiResponse<Download[]>>(endpoint)
+    return response.data ?? []
   }
 }
 

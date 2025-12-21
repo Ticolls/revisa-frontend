@@ -71,15 +71,19 @@ export interface UpdatePasswordRequest {
 }
 
 export interface UserPreferences {
+  id: string
+  userId: string
+  notifyFavoriteMaterial: boolean
   notifyRequestFulfilled: boolean
   notifyNewRequest: boolean
-  notifyNewMaterialInFavoriteDiscipline: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export interface UpdatePreferencesRequest {
+  notifyFavoriteMaterial?: boolean
   notifyRequestFulfilled?: boolean
   notifyNewRequest?: boolean
-  notifyNewMaterialInFavoriteDiscipline?: boolean
 }
 
 // Tipos de Disciplina
@@ -264,9 +268,14 @@ export interface NotificationFilters {
 export interface Download {
   id: string
   materialId: string
-  materialTitle: string
+  title: string
+  type: MaterialType
+  disciplineId: string
   disciplineCode: string
   disciplineName: string
+  fileName: string
+  fileSize: number
+  downloadCount: number
   downloadedAt: string
 }
 
