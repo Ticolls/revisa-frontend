@@ -42,16 +42,18 @@ import { adminService } from "@/lib/api/services/admin.service"
 const ITEMS_PER_PAGE = 10
 
 function AdminDisciplinesPage() {
+  const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [disciplines, setDisciplines] = useState<Discipline[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [showDisciplineDialog, setShowDisciplineDialog] = useState(false)
   const [editingDiscipline, setEditingDiscipline] = useState<Discipline | null>(null)
-  const [disciplineForm, setDisciplineForm] = useState({ code: "", name: "", semester: "" })
+  const [disciplineForm, setDisciplineForm] = useState({ code: "", name: "", semester: 1 })
   const [disciplineToDelete, setDisciplineToDelete] = useState<Discipline | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
+    setMounted(true)
     loadDisciplines()
   }, [])
 
@@ -67,6 +69,7 @@ function AdminDisciplinesPage() {
   }
 
   const filteredDisciplines = useMemo(() => {
+    if (!disciplines) return []
     if (!searchQuery.trim()) return disciplines
 
     const query = searchQuery.toLowerCase()
@@ -74,16 +77,17 @@ function AdminDisciplinesPage() {
       (d) =>
         d.code.toLowerCase().includes(query) ||
         d.name.toLowerCase().includes(query) ||
-        d.semester.toLowerCase().includes(query),
+        d.semester.toString().includes(query),
     )
   }, [disciplines, searchQuery])
 
   const paginatedDisciplines = useMemo(() => {
+    if (!filteredDisciplines) return []
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
     return filteredDisciplines.slice(startIndex, startIndex + ITEMS_PER_PAGE)
   }, [filteredDisciplines, currentPage])
 
-  const totalPages = Math.ceil(filteredDisciplines.length / ITEMS_PER_PAGE)
+  const totalPages = Math.ceil((filteredDisciplines?.length || 0) / ITEMS_PER_PAGE)
 
   const handleSaveDiscipline = async () => {
     try {
@@ -97,7 +101,7 @@ function AdminDisciplinesPage() {
       loadDisciplines()
       setShowDisciplineDialog(false)
       setEditingDiscipline(null)
-      setDisciplineForm({ code: "", name: "", semester: "" })
+      setDisciplineForm({ code: "", name: "", semester: 1 })
     } catch (error) {
       toast.error("Erro ao salvar disciplina")
     }
@@ -117,15 +121,8 @@ function AdminDisciplinesPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
-      </div>
-    )
+  if (!mounted || loading) {
+    return null
   }
 
   return (
@@ -289,9 +286,12 @@ function AdminDisciplinesPage() {
               <Label htmlFor="semester">Semestre</Label>
               <Input
                 id="semester"
+                type="number"
+                min="1"
+                max="10"
                 value={disciplineForm.semester}
-                onChange={(e) => setDisciplineForm({ ...disciplineForm, semester: e.target.value })}
-                placeholder="Ex: 2024.1"
+                onChange={(e) => setDisciplineForm({ ...disciplineForm, semester: parseInt(e.target.value) || 1 })}
+                placeholder="Ex: 1"
               />
             </div>
           </div>

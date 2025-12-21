@@ -190,12 +190,24 @@ export interface Report {
   createdAt: string
   resolvedAt?: string
   resolvedBy?: string
+  fileUrl?: string
+  answerKeyUrl?: string
 }
 
 export interface ReportFilters {
   status?: "pending" | "resolved" | "rejected"
   page?: number
   limit?: number
+}
+
+// Tipos de dados de gráfico
+export interface ChartDataItem {
+  month: string
+  users: number
+  disciplines: number
+  materials: number
+  requests: number
+  reports: number
 }
 
 // Tipos de Solicitação

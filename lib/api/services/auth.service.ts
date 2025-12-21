@@ -16,7 +16,6 @@ class AuthService {
 
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     const response = await apiClient.post<ApiResponse<AuthResponse>>(`${this.BASE_PATH}/login`, credentials)
-    // Limpar cache ao fazer login
     this.currentUserCache = null
     this.currentUserPromise = null
     return response.data!
@@ -24,7 +23,6 @@ class AuthService {
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
     const response = await apiClient.post<ApiResponse<AuthResponse>>(`/users/register`, userData)
-    console.log(response)
     this.currentUserCache = null
     this.currentUserPromise = null
     return response.data!

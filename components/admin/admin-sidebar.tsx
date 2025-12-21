@@ -25,7 +25,6 @@ export function AdminSidebar() {
     const handleLogout = async () => {
       try {
         await authService.logout()
-        // Limpar o contexto
         setUser(null)
         router.push("/login")
       } catch (error) {
@@ -44,7 +43,6 @@ export function AdminSidebar() {
             </div>
             <div>
               <span className="text-xl font-bold text-foreground block">REVISA</span>
-              <span className="text-xs text-muted-foreground">Admin</span>
             </div>
           </Link>
         </div>

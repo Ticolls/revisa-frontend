@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, XCircle, Search, X } from "lucide-react"
+import { CheckCircle, XCircle, Search, X, Download } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/pagination"
 import { withAdminAuth } from "@/lib/auth/protected-route"
 import { adminService } from "@/lib/api/services/admin.service"
+import { materialService } from "@/lib/api/services/material.service"
 import { Report } from "@/lib/api/types"
 
 const ITEMS_PER_PAGE = 10
@@ -81,6 +82,28 @@ function AdminReportsPage() {
   }, [filteredReports, currentPage])
 
   const totalPages = Math.ceil(filteredReports.length / ITEMS_PER_PAGE)
+
+  const handleDownloadMaterial = async (materialId: string) => {
+    try {
+      const url = await materialService.downloadMaterial(materialId)
+      window.open(url, "_blank")
+      toast.success("Download iniciado!")
+    } catch (error) {
+      console.error("Erro ao fazer download:", error)
+      toast.error("Erro ao fazer download do material")
+    }
+  }
+
+  const handleDownloadAnswerKey = async (materialId: string) => {
+    try {
+      const url = await materialService.downloadAnswerKey(materialId)
+      window.open(url, "_blank")
+      toast.success("Download do gabarito iniciado!")
+    } catch (error) {
+      console.error("Erro ao fazer download do gabarito:", error)
+      toast.error("Erro ao fazer download do gabarito")
+    }
+  }
 
   const handleResolveReport = async (action: "resolved" | "rejected") => {
     if (!selectedReport) return
@@ -251,45 +274,90 @@ function AdminReportsPage() {
       </Card>
 
       <Dialog open={!!selectedReport} onOpenChange={() => setSelectedReport(null)}>
-        <DialogContent className="max-w-[calc(100vw-2rem)]">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Revisar Denúncia</DialogTitle>
-            <DialogDescription>Analise a denúncia e tome uma ação</DialogDescription>
+            <DialogDescription>Analise as informações e os arquivos antes de tomar uma decisão</DialogDescription>
           </DialogHeader>
           {selectedReport && (
-            <div className="space-y-4">
-              <div>
-                <Label>Material</Label>
-                <p className="text-sm">{selectedReport.materialTitle}</p>
+            <div className="space-y-6">
+              {/* Informações da Denúncia */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Material</Label>
+                  <p className="text-sm font-medium">{selectedReport.materialTitle}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Autor do Material</Label>
+                  <p className="text-sm font-medium">{selectedReport.materialAuthorName}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Denunciante</Label>
+                  <p className="text-sm font-medium">{selectedReport.reporterName}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Data</Label>
+                  <p className="text-sm font-medium">{new Date(selectedReport.createdAt).toLocaleString()}</p>
+                </div>
               </div>
-              <div>
-                <Label>Autor do Material</Label>
-                <p className="text-sm">{selectedReport.materialAuthorName}</p>
+
+              {/* Motivo da Denúncia */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Motivo da Denúncia</Label>
+                <div className="rounded-md bg-muted p-3">
+                  <p className="text-sm whitespace-pre-wrap">{selectedReport.reason}</p>
+                </div>
               </div>
-              <div>
-                <Label>Denunciante</Label>
-                <p className="text-sm">{selectedReport.reporterName}</p>
-              </div>
-              <div>
-                <Label>Motivo da Denúncia</Label>
-                <p className="text-sm whitespace-pre-wrap">{selectedReport.reason}</p>
-              </div>
-              <div>
-                <Label>Data</Label>
-                <p className="text-sm">{new Date(selectedReport.createdAt).toLocaleString()}</p>
-              </div>
+
+              {/* Botões de Download */}
+              {(selectedReport.fileUrl || selectedReport.answerKeyUrl) && (
+                <div className="space-y-3 pt-2 border-t">
+                  <Label className="text-xs text-muted-foreground">Arquivos para Revisão</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {selectedReport.fileUrl && (
+                      <Button
+                        variant="outline"
+                        onClick={() => handleDownloadMaterial(selectedReport.materialId)}
+                        className="w-full justify-start"
+                        size="lg"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Baixar Material
+                      </Button>
+                    )}
+                    {selectedReport.answerKeyUrl && (
+                      <Button
+                        variant="outline"
+                        onClick={() => handleDownloadAnswerKey(selectedReport.materialId)}
+                        className="w-full justify-start"
+                        size="lg"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Baixar Gabarito
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
-          <DialogFooter className="flex justify-between">
+
+          {/* Ações */}
+          <DialogFooter className="flex-col sm:flex-row gap-2 pt-6 border-t">
             <Button
               variant="outline"
               onClick={() => handleResolveReport("rejected")}
-              className="hover:bg-destructive/10 hover:text-destructive"
+              className="w-full sm:flex-1 hover:bg-destructive/10 hover:text-destructive"
+              size="lg"
             >
               <XCircle className="h-4 w-4 mr-2" />
               Rejeitar Denúncia
             </Button>
-            <Button onClick={() => handleResolveReport("resolved")}>
+            <Button 
+              onClick={() => handleResolveReport("resolved")}
+              className="w-full sm:flex-1"
+              size="lg"
+            >
               <CheckCircle className="h-4 w-4 mr-2" />
               Resolver e Remover Material
             </Button>

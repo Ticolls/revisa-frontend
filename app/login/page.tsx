@@ -73,14 +73,11 @@ export default function LoginPage() {
       
       updateUser(fullUser)
 
-      // Redirecionar baseado no role
-      // if (fullUser.role === "ADMIN") {
-      //   router.push("/admin")
-      // } else {
-      //   router.push("/home")
-      // }
-
-      router.push("/home")
+      if (fullUser.role === "ADMIN") {
+        router.push("/admin")
+      } else {
+        router.push("/home")
+      }
 
 
     } catch (error) {

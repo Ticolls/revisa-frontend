@@ -43,6 +43,7 @@ import { withAdminAuth } from "@/lib/auth/protected-route"
 const ITEMS_PER_PAGE = 10
 
 function AdminMaterialsPage() {
+  const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [materials, setMaterials] = useState<Material[]>([])
   const [currentPage, setCurrentPage] = useState(1)
@@ -53,6 +54,7 @@ function AdminMaterialsPage() {
   const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
+    setMounted(true)
     loadMaterials()
   }, [])
 
@@ -68,6 +70,7 @@ function AdminMaterialsPage() {
   }
 
   const filteredMaterials = useMemo(() => {
+    if (!materials) return []
     if (!searchQuery.trim()) return materials
 
     const query = searchQuery.toLowerCase()
@@ -80,11 +83,12 @@ function AdminMaterialsPage() {
   }, [materials, searchQuery])
 
   const paginatedMaterials = useMemo(() => {
+    if (!filteredMaterials) return []
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
     return filteredMaterials.slice(startIndex, startIndex + ITEMS_PER_PAGE)
   }, [filteredMaterials, currentPage])
 
-  const totalPages = Math.ceil(filteredMaterials.length / ITEMS_PER_PAGE)
+  const totalPages = Math.ceil((filteredMaterials?.length || 0) / ITEMS_PER_PAGE)
 
   const handleDeleteMaterial = async () => {
     if (!materialToDelete) return
@@ -115,15 +119,8 @@ function AdminMaterialsPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
-      </div>
-    )
+  if (!mounted || loading) {
+    return null
   }
 
   return (

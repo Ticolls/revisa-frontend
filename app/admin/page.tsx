@@ -8,8 +8,10 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { adminService } from "@/lib/api/services/admin.service"
 import { withAdminAuth } from "@/lib/auth/protected-route"
+import type { ChartDataItem } from "@/lib/api/types"
 
 function AdminDashboardPage() {
+  const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -19,17 +21,19 @@ function AdminDashboardPage() {
     pendingReports: 0,
   })
   const [period, setPeriod] = useState<"6months" | "1year" | "2years" | "all">("1year")
-  const [chartData, setChartData] = useState<any[]>([])
+  const [chartData, setChartData] = useState<ChartDataItem[]>([])
 
   useEffect(() => {
+    setMounted(true)
     loadStatistics()
     loadChartData()
-    setLoading(false)
   }, [])
 
   useEffect(() => {
-    loadChartData()
-  }, [period])
+    if (mounted) {
+      loadChartData()
+    }
+  }, [period, mounted])
 
   const loadStatistics = async () => {
     try {
@@ -37,6 +41,8 @@ function AdminDashboardPage() {
       setStats(data)
     } catch (error) {
       console.error("Erro ao carregar estatísticas:", error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -49,9 +55,9 @@ function AdminDashboardPage() {
     }
   }
 
-  if (loading) {
+  if (!mounted || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Carregando...</p>
@@ -61,35 +67,35 @@ function AdminDashboardPage() {
   }
 
   const usuariosChartConfig = {
-    usuarios: {
+    users: {
       label: "Usuários",
       color: "hsl(217, 91%, 60%)",
     },
   }
 
   const disciplinasChartConfig = {
-    disciplinas: {
+    disciplines: {
       label: "Disciplinas",
       color: "hsl(142, 71%, 45%)",
     },
   }
 
   const materiaisChartConfig = {
-    materiais: {
+    materials: {
       label: "Materiais",
       color: "hsl(262, 83%, 58%)",
     },
   }
 
   const solicitacoesChartConfig = {
-    solicitacoes: {
+    requests: {
       label: "Solicitações",
       color: "hsl(25, 95%, 53%)",
     },
   }
 
   const denunciasChartConfig = {
-    denuncias: {
+    reports: {
       label: "Denúncias",
       color: "hsl(0, 84%, 60%)",
     },
@@ -197,7 +203,7 @@ function AdminDashboardPage() {
                 <ChartTooltip content={<ChartTooltipContent />} cursor={{ strokeDasharray: "3 3" }} />
                 <Area
                   type="monotone"
-                  dataKey="usuarios"
+                  dataKey="users"
                   stroke="hsl(217, 91%, 60%)"
                   fill="url(#fillUsuarios)"
                   strokeWidth={2}
@@ -231,7 +237,7 @@ function AdminDashboardPage() {
                 <ChartTooltip content={<ChartTooltipContent />} cursor={{ strokeDasharray: "3 3" }} />
                 <Area
                   type="monotone"
-                  dataKey="disciplinas"
+                  dataKey="disciplines"
                   stroke="hsl(142, 71%, 45%)"
                   fill="url(#fillDisciplinas)"
                   strokeWidth={2}
@@ -265,7 +271,7 @@ function AdminDashboardPage() {
                 <ChartTooltip content={<ChartTooltipContent />} cursor={{ strokeDasharray: "3 3" }} />
                 <Area
                   type="monotone"
-                  dataKey="materiais"
+                  dataKey="materials"
                   stroke="hsl(262, 83%, 58%)"
                   fill="url(#fillMateriais)"
                   strokeWidth={2}
@@ -299,7 +305,7 @@ function AdminDashboardPage() {
                 <ChartTooltip content={<ChartTooltipContent />} cursor={{ strokeDasharray: "3 3" }} />
                 <Area
                   type="monotone"
-                  dataKey="solicitacoes"
+                  dataKey="requests"
                   stroke="hsl(25, 95%, 53%)"
                   fill="url(#fillSolicitacoes)"
                   strokeWidth={2}
@@ -333,7 +339,7 @@ function AdminDashboardPage() {
                 <ChartTooltip content={<ChartTooltipContent />} cursor={{ strokeDasharray: "3 3" }} />
                 <Area
                   type="monotone"
-                  dataKey="denuncias"
+                  dataKey="reports"
                   stroke="hsl(0, 84%, 60%)"
                   fill="url(#fillDenuncias)"
                   strokeWidth={2}

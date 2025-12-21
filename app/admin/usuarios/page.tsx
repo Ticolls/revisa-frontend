@@ -50,6 +50,7 @@ interface FormErrors {
 
 function AdminUsersPage() {
   const { toast } = useToast()
+  const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [users, setUsers] = useState<User[]>([])
   const [currentPage, setCurrentPage] = useState(1)
@@ -62,6 +63,7 @@ function AdminUsersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     loadUsers()
   }, [])
 
@@ -119,6 +121,7 @@ function AdminUsersPage() {
   }
 
   const filteredUsers = useMemo(() => {
+    if (!users) return []
     if (!searchQuery.trim()) return users
 
     const query = searchQuery.toLowerCase()
@@ -126,11 +129,12 @@ function AdminUsersPage() {
   }, [users, searchQuery])
 
   const paginatedUsers = useMemo(() => {
+    if (!filteredUsers) return []
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
     return filteredUsers.slice(startIndex, startIndex + ITEMS_PER_PAGE)
   }, [filteredUsers, currentPage])
 
-  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE)
+  const totalPages = Math.ceil((filteredUsers?.length || 0) / ITEMS_PER_PAGE)
 
   const handleDeleteUser = async () => {
     if (!userToDelete) return
@@ -195,15 +199,8 @@ function AdminUsersPage() {
     setShowUserDialog(true)
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
-      </div>
-    )
+  if (!mounted || loading) {
+    return null
   }
 
   return (

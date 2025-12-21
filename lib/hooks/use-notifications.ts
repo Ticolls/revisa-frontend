@@ -98,17 +98,14 @@ export function useNotifications(userId?: string): UseNotificationsReturn {
     socketRef.current = socket
 
     socket.on("connect", () => {
-      console.log("WebSocket connected")
       setIsConnected(true)
     })
 
     socket.on("disconnect", () => {
-      console.log("WebSocket disconnected")
       setIsConnected(false)
     })
 
     socket.on("notification", (notification: Notification) => {
-      console.log("New notification received:", notification)
       setNotifications((prev) => [notification, ...prev])
       setUnreadCount((prev) => prev + 1)
     })

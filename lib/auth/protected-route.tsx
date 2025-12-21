@@ -19,8 +19,6 @@ export function ProtectedRoute({ children, requiredRole, fallbackUrl = "/login" 
   useEffect(() => {
     if (isLoading) return
 
-    console.log("ProtectedRoute: user =", user)
-
     if (!user) {
       router.push(fallbackUrl)
       return
