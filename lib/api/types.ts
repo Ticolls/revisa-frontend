@@ -246,22 +246,25 @@ export interface FulfillRequestRequest {
 // Tipos de Notificação
 export interface Notification {
   id: string
-  type: "request_fulfilled" | "new_request" | "new_material"
+  userId: string
+  type: string
   title: string
   message: string
+  data?: any
   read: boolean
   createdAt: string
-  data: {
-    requestId?: string
-    materialId?: string
-    disciplineId?: string
-  }
 }
 
 export interface NotificationFilters {
   onlyUnread?: boolean
   page?: number
   limit?: number
+}
+
+export interface NotificationPaginatedResponse {
+  notifications: Notification[]
+  total: number
+  unreadCount: number
 }
 
 // Tipos de Download
