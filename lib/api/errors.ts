@@ -11,6 +11,8 @@ export class ApiException extends Error {
 }
 
 export const handleApiError = (error: unknown): ApiError => {
+  console.log(error)
+  console.log("Handling API Error:", error)
   console.error("Handling API Error:", error)
   if (error instanceof TypeError && error.message.includes("fetch")) {
     return {
