@@ -37,6 +37,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const PAGE_SIZE = 10
 
+const MATERIAL_TYPE_LABELS: Record<MaterialType, string> = {
+  EXAM: "Prova antiga",
+  EXERCISE_SHEET: "Lista de exercícios",
+  SUMMARY: "Resumo",
+  SLIDE: "Slides",
+}
+
 function RequestsPage() {
   const [showSuccess, setShowSuccess] = useState(false)
   const [allRequests, setAllRequests] = useState<Request[]>([])
@@ -152,7 +159,7 @@ function RequestsPage() {
 
   const formatMaterialType = (type?: Request["type"]) => {
     if (!type) return ""
-    return type.toLowerCase().replace(/_/g, " ")
+    return MATERIAL_TYPE_LABELS[type as MaterialType] ?? type.toLowerCase().replace(/_/g, " ")
   }
 
   const openEditModal = (request: Request) => {
