@@ -1,34 +1,9 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-const publicRoutes = ["/", "/login", "/cadastro", "/esqueci-senha"]
-
-const adminRoutes = ["/admin"]
-
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-
-  const isPublicRoute = publicRoutes.some((route) => pathname === route || pathname.startsWith(route))
-  
-  const isAdminRoute = adminRoutes.some((route) => pathname.startsWith(route))
-
-  const hasSessionCookie = request.cookies.has("access_token")
-
-  if (!isPublicRoute && !hasSessionCookie) {
-    const loginUrl = new URL("/login", request.url)
-    loginUrl.searchParams.set("redirect", pathname)
-    return NextResponse.redirect(loginUrl)
-  }
-
-  if (isAdminRoute && !hasSessionCookie) {
-    return NextResponse.redirect(new URL("/login", request.url))
-  }
-
-  // Se está autenticado e tenta acessar login/cadastro, redirecionar para home
-  // if (hasSessionCookie && (pathname === "/login" || pathname === "/cadastro")) {
-  //   return NextResponse.redirect(new URL("/home", request.url))
-  // }
-
+// Autenticação é verificada no client (ProtectedRoute) e pela API (401/403).
+// O edge middleware não tenta ler cookies HttpOnly cross-domain para evitar falsos redirecionamentos.
+export function middleware(_request: NextRequest) {
   return NextResponse.next()
 }
 
