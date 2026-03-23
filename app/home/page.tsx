@@ -32,6 +32,8 @@ interface FavoriteDiscipline {
   materials: number
 }
 
+const MAX_FAVORITE_DISCIPLINES = 9
+
 function HomePage() {
   const { user } = useAuth()
   const { toast } = useToast()
@@ -61,7 +63,7 @@ function HomePage() {
           materials: disc._count?.materials || 0
         }))
         
-        setFavoriteDisciplines(formatted.slice(0, 3))
+        setFavoriteDisciplines(formatted.slice(0, MAX_FAVORITE_DISCIPLINES))
       } catch (err) {
         console.error("Erro ao carregar disciplinas favoritas:", err)
       } finally {
