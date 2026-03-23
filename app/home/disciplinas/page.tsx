@@ -187,7 +187,7 @@ function DisciplinesPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total de Disciplinas</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-foreground">{disciplines.length}</p>
+            <p className="text-2xl font-bold text-foreground">{totalDisciplines}</p>
           </CardContent>
         </Card>
         <Card>
@@ -240,6 +240,7 @@ function DisciplinesPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os semestres</SelectItem>
+              <SelectItem value="0">Optativas</SelectItem>
               <SelectItem value="1">1º Semestre</SelectItem>
               <SelectItem value="2">2º Semestre</SelectItem>
               <SelectItem value="3">3º Semestre</SelectItem>
@@ -284,7 +285,7 @@ function DisciplinesPage() {
           <div className="flex flex-wrap gap-2">
             {semesterFilter !== "all" && (
               <Badge variant="secondary" className="cursor-pointer" onClick={() => setSemesterFilter("all")}>
-                {semesterFilter} Semestre
+                {semesterFilter === "0" ? "Optativas" : `${semesterFilter} Semestre`}
                 <X className="h-3 w-3 ml-1" />
               </Badge>
             )}
