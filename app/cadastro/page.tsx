@@ -99,7 +99,7 @@ export default function RegisterPage() {
       })
 
       // Mostrar toast de sucesso
-      toast.success("Conta criada com sucesso! Você já pode fazer login.")
+      toast.success("Conta criada! Verifique seu e-mail @ufba.br antes de fazer login.")
       
       router.push("/login")
     } catch (error) {
