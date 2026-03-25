@@ -17,10 +17,16 @@ class AuthService {
   private currentUserPromise: Promise<User> | null = null
 
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    const response = await apiClient.post<ApiResponse<AuthResponse>>(`${this.BASE_PATH}/login`, credentials)
+    const response = await apiClient.post<ApiResponse<{ user: any; token?: string }>>(`${this.BASE_PATH}/login`, credentials)
     this.currentUserCache = null
     this.currentUserPromise = null
-    return response.data!
+    
+    // Armazenar token no localStorage como fallback para casos onde o cookie não funciona (ex: celular)
+    if (response.data?.token && typeof window !== "undefined") {
+      localStorage.setItem("auth_token", response.data.token)
+    }
+    
+    return response.data as unknown as AuthResponse
   }
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
@@ -68,6 +74,10 @@ class AuthService {
     // Limpar cache ao fazer logout
     this.currentUserCache = null
     this.currentUserPromise = null
+    // Limpar token do localStorage
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("auth_token")
+    }
   }
 
   async getCurrentUser(): Promise<User> {

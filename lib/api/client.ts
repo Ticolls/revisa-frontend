@@ -167,12 +167,37 @@ class ApiClient {
 // Instância singleton do cliente
 export const apiClient = new ApiClient()
 
+// Interceptador de requisição para adicionar token no header como fallback
+apiClient.addRequestInterceptor(async (config) => {
+  // Tenta extrair o token do documento de cookies
+  const tokenFromCookie = typeof document !== "undefined" 
+    ? document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("access_token="))
+        ?.split("=")[1]
+    : null
+
+  // Se não encontrou no cookie, tenta enviar pelo header Authorization
+  if (!tokenFromCookie && typeof window !== "undefined") {
+    const token = localStorage.getItem("auth_token")
+    if (token) {
+      config.headers = {
+        ...config.headers,
+        Authorization: `Bearer ${token}`,
+      }
+    }
+  }
+
+  return config
+})
+
 // Interceptador para tratar erro 401 (não autorizado)
 apiClient.addErrorInterceptor((error) => {
   if (error.status === 401) {
     // Limpar dados do usuário e redirecionar para login
     if (typeof window !== "undefined") {
       localStorage.removeItem("user")
+      localStorage.removeItem("auth_token")
       
       // Rotas públicas que não devem redirecionar
       const publicRoutes = ["/", "/login", "/cadastro", "/esqueci-senha"]

@@ -91,6 +91,9 @@ export default function LoginPage() {
         password: formData.password,
       })
 
+      // Pequeno delay para garantir que o cookie foi salvo corretamente
+      await new Promise(resolve => setTimeout(resolve, 500))
+
       const fullUser = await authService.getCurrentUser()
       
       updateUser(fullUser)
@@ -101,10 +104,15 @@ export default function LoginPage() {
         router.push("/home")
       }
 
-
     } catch (error) {
       const apiErrorData = handleApiError(error)
-      setApiError(apiErrorData.message)
+      
+      // Se o erro for de autenticação ao buscar dados do usuário, pode ser problema de cookie
+      if (apiErrorData.status === 401) {
+        setApiError("Erro ao confirmar autenticação. Por favor, tente fazer login novamente.")
+      } else {
+        setApiError(apiErrorData.message)
+      }
     } finally {
       setIsLoading(false)
     }

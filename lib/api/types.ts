@@ -46,7 +46,7 @@ export interface AuthResponse {
     name: string
     email: string
   }
-  token?: string // Opcional, pois agora vem via cookie httpOnly
+  token: string // Agora sempre retorna o token para fallback
 }
 
 export interface ResetPasswordResponse {
