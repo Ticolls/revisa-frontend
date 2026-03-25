@@ -176,8 +176,11 @@ apiClient.addErrorInterceptor((error) => {
       
       // Rotas públicas que não devem redirecionar
       const publicRoutes = ["/", "/login", "/cadastro", "/esqueci-senha"]
+      const publicRoutePrefixes = ["/alterar-senha/", "/users/confirm-email"]
       const currentPath = window.location.pathname
-      const isPublicRoute = publicRoutes.includes(currentPath)
+      const isPublicRoute =
+        publicRoutes.includes(currentPath) ||
+        publicRoutePrefixes.some((prefix) => currentPath.startsWith(prefix))
       
       // Apenas redirecionar se não estiver em rota pública
       if (!isPublicRoute) {
