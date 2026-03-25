@@ -15,6 +15,7 @@ import { handleApiError } from "@/lib/api/errors"
 import { validateLoginForm } from "@/lib/validations/auth"
 import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react"
 import { useAuth } from "@/lib/hooks/use-auth"
+import { toast } from "sonner"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -26,7 +27,28 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [apiError, setApiError] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isResendingVerification, setIsResendingVerification] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+
+  const canResendVerification = apiError.toLowerCase().includes("não verificada")
+
+  const handleResendVerification = async () => {
+    if (!formData.email) {
+      setErrors((prev) => ({ ...prev, email: "Informe o e-mail para reenviar a verificação" }))
+      return
+    }
+
+    setIsResendingVerification(true)
+    try {
+      const response = await authService.resendVerificationEmail({ email: formData.email })
+      toast.success(response.message)
+    } catch (error) {
+      const apiErrorData = handleApiError(error)
+      toast.error(apiErrorData.message)
+    } finally {
+      setIsResendingVerification(false)
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -96,6 +118,25 @@ export default function LoginPage() {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{apiError}</AlertDescription>
           </Alert>
+        )}
+
+        {canResendVerification && (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={handleResendVerification}
+            disabled={isResendingVerification}
+          >
+            {isResendingVerification ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Reenviando e-mail...
+              </>
+            ) : (
+              "Reenviar e-mail de verificação"
+            )}
+          </Button>
         )}
 
         <div className="space-y-2">

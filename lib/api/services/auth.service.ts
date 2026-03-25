@@ -3,6 +3,8 @@ import type {
   LoginRequest,
   RegisterRequest,
   ForgotPasswordRequest,
+  ResendVerificationEmailRequest,
+  ResetPasswordRequest,
   AuthResponse,
   ResetPasswordResponse,
   ApiResponse,
@@ -34,6 +36,31 @@ class AuthService {
       data
     )
     return response.data!
+  }
+
+  async resetPassword(token: string, data: ResetPasswordRequest): Promise<ResetPasswordResponse> {
+    const response = await apiClient.post<ApiResponse<ResetPasswordResponse>>(
+      `${this.BASE_PATH}/reset-password?token=${token}`,
+      data,
+    )
+    return response.data!
+  }
+
+  async confirmEmail(token: string): Promise<boolean> {
+    return apiClient.post<boolean>(`${this.BASE_PATH}/confirm-email?token=${token}`)
+  }
+
+  async resendVerificationEmail(
+    data: ResendVerificationEmailRequest,
+  ): Promise<{ message: string }> {
+    const response = await apiClient.post<ApiResponse<null>>(
+      `${this.BASE_PATH}/resend-verification-email`,
+      data,
+    )
+
+    return {
+      message: response.message || "E-mail de verificação reenviado com sucesso.",
+    }
   }
 
   async logout(): Promise<void> {

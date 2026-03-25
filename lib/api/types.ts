@@ -26,6 +26,14 @@ export interface ForgotPasswordRequest {
   email: string
 }
 
+export interface ResetPasswordRequest {
+  newPassword: string
+}
+
+export interface ResendVerificationEmailRequest {
+  email: string
+}
+
 export enum Role {
   DEFAULT = "DEFAULT",
   ADMIN = "ADMIN",

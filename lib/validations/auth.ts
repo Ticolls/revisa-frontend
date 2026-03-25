@@ -17,6 +17,19 @@ export const validateEmail = (email: string): string | null => {
   return null
 }
 
+export const validateUfbaEmail = (email: string): string | null => {
+  const baseEmailError = validateEmail(email)
+  if (baseEmailError) {
+    return baseEmailError
+  }
+
+  if (!email.toLowerCase().endsWith("@ufba.br")) {
+    return "Apenas e-mails institucionais @ufba.br são aceitos"
+  }
+
+  return null
+}
+
 export const validatePassword = (password: string): string | null => {
   if (!password) {
     return "A senha é obrigatória"
@@ -72,7 +85,7 @@ export const validateConfirmPassword = (password: string, confirmPassword: strin
 export const validateLoginForm = (email: string, password: string): ValidationError[] => {
   const errors: ValidationError[] = []
 
-  const emailError = validateEmail(email)
+  const emailError = validateUfbaEmail(email)
   if (emailError) {
     errors.push({ field: "email", message: emailError })
   }

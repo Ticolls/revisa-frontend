@@ -99,7 +99,7 @@ export default function RegisterPage() {
       })
 
       // Mostrar toast de sucesso
-      toast.success("Conta criada com sucesso! Faça login para continuar.")
+      toast.success("Conta criada! Verifique seu e-mail @ufba.br antes de fazer login.")
       
       router.push("/login")
     } catch (error) {
@@ -149,13 +149,14 @@ export default function RegisterPage() {
             id="email"
             name="email"
             type="email"
-            placeholder="seu@email.com"
+            placeholder="seu.nome@ufba.br"
             value={formData.email}
             onChange={handleChange}
             disabled={isLoading}
             className={errors.email ? "border-destructive" : ""}
             autoComplete="email"
           />
+          <p className="text-xs text-muted-foreground">Aceitamos apenas e-mails institucionais @ufba.br</p>
           {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
         </div>
 
