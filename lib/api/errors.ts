@@ -10,13 +10,34 @@ export class ApiException extends Error {
   }
 }
 
+const normalizeErrorMessage = (message: unknown): string => {
+  if (typeof message === "string") {
+    return message
+  }
+
+  if (Array.isArray(message)) {
+    return message.map((item) => normalizeErrorMessage(item)).join("; ")
+  }
+
+  if (message && typeof message === "object") {
+    if ("message" in message) {
+      return normalizeErrorMessage((message as Record<string, unknown>).message)
+    }
+
+    try {
+      return JSON.stringify(message)
+    } catch {
+      return "Ocorreu um erro inesperado."
+    }
+  }
+
+  return "Ocorreu um erro inesperado."
+}
+
 export const handleApiError = (error: unknown): ApiError => {
-  console.log("Error object:", error)
-  
-  // Se for um objeto com propriedade message
   if (error instanceof ApiException) {
     return {
-      message: error.message,
+      message: normalizeErrorMessage(error.message),
       status: error.status,
     }
   }
@@ -32,7 +53,7 @@ export const handleApiError = (error: unknown): ApiError => {
   if (error && typeof error === "object" && "message" in error) {
     const errorObj = error as Record<string, unknown>
     return {
-      message: String(errorObj.message),
+      message: normalizeErrorMessage(errorObj.message),
       status: typeof errorObj.status === "number" ? errorObj.status : undefined,
     }
   }

@@ -86,19 +86,15 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      await authService.login({
+      const loginResponse = await authService.login({
         email: formData.email,
         password: formData.password,
       })
 
-      // Pequeno delay para garantir que o cookie foi salvo corretamente
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Evita corrida no mobile entre set-cookie e chamada imediata de /auth/me.
+      updateUser(loginResponse.user)
 
-      const fullUser = await authService.getCurrentUser()
-      
-      updateUser(fullUser)
-
-      if (fullUser.role === "ADMIN") {
+      if (loginResponse.user.role === "ADMIN") {
         router.push("/admin")
       } else {
         router.push("/home")
@@ -106,13 +102,7 @@ export default function LoginPage() {
 
     } catch (error) {
       const apiErrorData = handleApiError(error)
-      
-      // Se o erro for de autenticação ao buscar dados do usuário, pode ser problema de cookie
-      if (apiErrorData.status === 401) {
-        setApiError("Erro ao confirmar autenticação. Por favor, tente fazer login novamente.")
-      } else {
-        setApiError(apiErrorData.message)
-      }
+      setApiError(apiErrorData.message)
     } finally {
       setIsLoading(false)
     }
