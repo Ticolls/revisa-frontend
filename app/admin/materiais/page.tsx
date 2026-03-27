@@ -90,6 +90,30 @@ function AdminMaterialsPage() {
 
   const totalPages = Math.ceil((filteredMaterials?.length || 0) / ITEMS_PER_PAGE)
 
+  const paginationItems = useMemo(() => {
+    if (totalPages <= 1) return [] as Array<number | string>
+
+    const items: Array<number | string> = []
+    const start = Math.max(1, currentPage - 2)
+    const end = Math.min(totalPages, currentPage + 2)
+
+    if (start > 1) {
+      items.push(1)
+      if (start > 2) items.push("ellipsis-start")
+    }
+
+    for (let page = start; page <= end; page += 1) {
+      items.push(page)
+    }
+
+    if (end < totalPages) {
+      if (end < totalPages - 1) items.push("ellipsis-end")
+      items.push(totalPages)
+    }
+
+    return items
+  }, [currentPage, totalPages])
+
   const handleDeleteMaterial = async () => {
     if (!materialToDelete) return
 
@@ -218,22 +242,21 @@ function AdminMaterialsPage() {
                       className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                     />
                   </PaginationItem>
-                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((page) => (
-                    <PaginationItem key={page}>
-                      <PaginationLink
-                        onClick={() => setCurrentPage(page)}
-                        isActive={currentPage === page}
-                        className="cursor-pointer"
-                      >
-                        {page}
-                      </PaginationLink>
+                  {paginationItems.map((item) => (
+                    <PaginationItem key={item}>
+                      {typeof item === "number" ? (
+                        <PaginationLink
+                          onClick={() => setCurrentPage(item)}
+                          isActive={currentPage === item}
+                          className="cursor-pointer"
+                        >
+                          {item}
+                        </PaginationLink>
+                      ) : (
+                        <PaginationEllipsis />
+                      )}
                     </PaginationItem>
                   ))}
-                  {totalPages > 5 && (
-                    <PaginationItem>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  )}
                   <PaginationItem>
                     <PaginationNext
                       onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
