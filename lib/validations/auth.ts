@@ -85,7 +85,7 @@ export const validateConfirmPassword = (password: string, confirmPassword: strin
 export const validateLoginForm = (email: string, password: string): ValidationError[] => {
   const errors: ValidationError[] = []
 
-  const emailError = validateUfbaEmail(email)
+  const emailError = validateEmail(email)
   if (emailError) {
     errors.push({ field: "email", message: emailError })
   }
@@ -110,7 +110,7 @@ export const validateRegisterForm = (
     errors.push({ field: "name", message: nameError })
   }
 
-  const emailError = validateEmail(email)
+  const emailError = validateUfbaEmail(email)
   if (emailError) {
     errors.push({ field: "email", message: emailError })
   }
