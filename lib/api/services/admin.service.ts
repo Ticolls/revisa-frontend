@@ -37,8 +37,16 @@ class AdminService {
     return response.data!
   }
 
-  async updateUser(id: string, data: { name?: string; email?: string }): Promise<User> {
+  async updateUser(
+    id: string,
+    data: { name?: string; email?: string; password?: string; isVerified?: boolean },
+  ): Promise<User> {
     const response = await apiClient.put<ApiResponse<User>>(`/users/${id}`, data)
+    return response.data!
+  }
+
+  async verifyUser(id: string): Promise<User> {
+    const response = await apiClient.patch<ApiResponse<User>>(`/users/${id}/verify`)
     return response.data!
   }
 

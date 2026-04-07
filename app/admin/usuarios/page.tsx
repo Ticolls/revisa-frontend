@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import {
   Pagination,
   PaginationContent,
@@ -58,6 +59,7 @@ function AdminUsersPage() {
   const [showUserDialog, setShowUserDialog] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [userForm, setUserForm] = useState({ name: "", email: "", password: "" })
+  const [isVerifiedToggle, setIsVerifiedToggle] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [formErrors, setFormErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -189,9 +191,9 @@ function AdminUsersPage() {
     setIsSubmitting(true)
     try {
       if (editingUser) {
-        const updateData = userForm.password.trim() === "" 
-          ? { name: userForm.name, email: userForm.email }
-          : userForm
+        const updateData = userForm.password.trim() === ""
+          ? { name: userForm.name, email: userForm.email, isVerified: isVerifiedToggle }
+          : { ...userForm, isVerified: isVerifiedToggle }
         await adminService.updateUser(editingUser.id, updateData)
         toast.success("Usuário atualizado com sucesso!")
       } else {
@@ -216,8 +218,10 @@ function AdminUsersPage() {
     setEditingUser(user)
     if (user) {
       setUserForm({ name: user.name, email: user.email, password: "" })
+      setIsVerifiedToggle(user.isVerified)
     } else {
       setUserForm({ name: "", email: "", password: "" })
+      setIsVerifiedToggle(false)
     }
     setFormErrors({})
     setShowUserDialog(true)
@@ -469,6 +473,24 @@ function AdminUsersPage() {
                   </p>
                 )}
               </div>
+              {editingUser && (
+                <div className="rounded-md border p-3 bg-muted/30">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium">Verificação de e-mail</p>
+                      <p className="text-xs text-muted-foreground">
+                        Marque para verificar manualmente ou desmarque para remover a verificação.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={isVerifiedToggle}
+                      onCheckedChange={setIsVerifiedToggle}
+                      disabled={isSubmitting}
+                      aria-label="Alternar verificação de e-mail do usuário"
+                    />
+                  </div>
+                </div>
+              )}
           </div>
           <DialogFooter>
             <Button 

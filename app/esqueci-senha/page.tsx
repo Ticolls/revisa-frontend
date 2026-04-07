@@ -73,9 +73,9 @@ export default function ForgotPasswordPage() {
           <Alert className="border-primary/50 bg-primary/5">
             <CheckCircle2 className="h-4 w-4 text-primary" />
             <AlertDescription className="text-foreground">
-              <strong className="font-medium">E-mail enviado com sucesso!</strong>
+              <strong className="font-medium">Solicitação recebida.</strong>
               <p className="mt-1 text-sm">
-                Verifique sua caixa de entrada e siga as instruções para redefinir sua senha. Se não encontrar o e-mail,
+                Se o e-mail informado estiver cadastrado, você receberá as instruções para redefinir a senha. Se não encontrar,
                 verifique a pasta de spam.
               </p>
             </AlertDescription>
