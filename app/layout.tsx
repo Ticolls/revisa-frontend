@@ -13,6 +13,11 @@ export const metadata: Metadata = {
   description:
     "Plataforma colaborativa para estudantes de Ciência da Computação da UFBA compartilharem materiais acadêmicos organizados por disciplina.",
   generator: "v0.app",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
 }
 
 export default function RootLayout({
