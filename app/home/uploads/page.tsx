@@ -2,13 +2,14 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Dialog,
@@ -28,7 +29,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Upload, FileText, CheckCircle2, Trash2, Download, UserCheck, Loader2, Calendar } from "lucide-react"
+import {
+  Upload,
+  FileText,
+  CheckCircle2,
+  Trash2,
+  Download,
+  UserCheck,
+  Loader2,
+  Calendar,
+  Check,
+  ChevronsUpDown,
+  ChevronsLeft,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsRight,
+} from "lucide-react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { FileUploadZone } from "@/components/uploads/file-upload-zone"
 import { withAuth } from "@/lib/auth/protected-route"
@@ -37,6 +53,7 @@ import { disciplineService } from "@/lib/api/services/discipline.service"
 import { requestService } from "@/lib/api/services/request.service"
 import { toast } from "sonner"
 import type { Material, MaterialType, Discipline, CreateMaterialRequest } from "@/lib/api/types"
+import { cn } from "@/lib/utils"
 
 type LockedFields = {
   discipline: boolean
@@ -51,6 +68,8 @@ const createUnlockedFields = (): LockedFields => ({
   title: false,
   professor: false,
 })
+
+const UPLOADS_PAGE_SIZE = 10
 
 function UploadsPage() {
   const [isUploading, setIsUploading] = useState(false)
@@ -68,10 +87,13 @@ function UploadsPage() {
 
   const [disciplines, setDisciplines] = useState<Discipline[]>([])
   const [isLoadingDisciplines, setIsLoadingDisciplines] = useState(true)
+  const [disciplineDropdownOpen, setDisciplineDropdownOpen] = useState(false)
+  const [disciplineSearch, setDisciplineSearch] = useState("")
   
   const [uploads, setUploads] = useState<Material[]>([])
   const [isLoadingUploads, setIsLoadingUploads] = useState(true)
   const [totalUploads, setTotalUploads] = useState(0)
+  const [uploadsPage, setUploadsPage] = useState(1)
 
   const [attendingRequest, setAttendingRequest] = useState<{
     id: string
@@ -87,6 +109,37 @@ function UploadsPage() {
   const [lockedFields, setLockedFields] = useState<LockedFields>(() => createUnlockedFields())
 
   const resetLockedFields = () => setLockedFields(createUnlockedFields())
+
+  const selectedDiscipline = useMemo(
+    () => disciplines.find((discipline) => discipline.id === disciplineId),
+    [disciplines, disciplineId],
+  )
+
+  const filteredDisciplines = useMemo(() => {
+    const query = disciplineSearch.trim().toLowerCase()
+
+    if (!query) return disciplines
+
+    return disciplines.filter((discipline) => {
+      const label = `${discipline.code} ${discipline.name}`.toLowerCase()
+      return label.includes(query)
+    })
+  }, [disciplines, disciplineSearch])
+
+  const loadMyUploads = async (page = 1) => {
+    try {
+      setIsLoadingUploads(true)
+      const response = await materialService.getMyUploads(page, UPLOADS_PAGE_SIZE)
+      setUploads(response.materials)
+      setTotalUploads(response.total)
+      setUploadsPage(page)
+    } catch (error) {
+      console.error("Erro ao carregar uploads:", error)
+      toast.error("Erro ao carregar seus uploads")
+    } finally {
+      setIsLoadingUploads(false)
+    }
+  }
 
   // Carregar disciplinas
   useEffect(() => {
@@ -108,21 +161,7 @@ function UploadsPage() {
 
   // Carregar meus uploads
   useEffect(() => {
-    const fetchMyUploads = async () => {
-      try {
-        setIsLoadingUploads(true)
-        const response = await materialService.getMyUploads(1, 50)
-        setUploads(response.materials)
-        setTotalUploads(response.total)
-      } catch (error) {
-        console.error("Erro ao carregar uploads:", error)
-        toast.error("Erro ao carregar seus uploads")
-      } finally {
-        setIsLoadingUploads(false)
-      }
-    }
-
-    fetchMyUploads()
+    loadMyUploads(1)
   }, [])
 
   // Preencher formulário via query params
@@ -259,9 +298,7 @@ function UploadsPage() {
         router.replace("/home/uploads")
       }
 
-      const response = await materialService.getMyUploads(1, 50)
-      setUploads(response.materials)
-      setTotalUploads(response.total)
+      await loadMyUploads(1)
 
       setTimeout(() => setShowSuccess(false), 5000)
     } catch (error) {
@@ -289,11 +326,9 @@ function UploadsPage() {
       setIsDeleting(true)
       await materialService.deleteMaterial(upload.id)
       toast.success("Material excluído com sucesso")
-      
-      // Recarregar uploads
-      const response = await materialService.getMyUploads(1, 50)
-      setUploads(response.materials)
-      setTotalUploads(response.total)
+
+      const nextPage = Math.min(uploadsPage, Math.ceil((totalUploads - 1) / UPLOADS_PAGE_SIZE) || 1)
+      await loadMyUploads(nextPage)
       
       setUploadToDelete(null)
     } catch (error) {
@@ -302,6 +337,77 @@ function UploadsPage() {
     } finally {
       setIsDeleting(false)
     }
+  }
+
+  const handleSelectDiscipline = (id: string) => {
+    setDisciplineId(id)
+    setDisciplineDropdownOpen(false)
+    setDisciplineSearch("")
+  }
+
+  const isUploadFormValid = Boolean(
+    disciplineId && materialType && title.trim() && selectedFile,
+  )
+
+  const renderUploadsPagination = () => {
+    if (totalUploads <= UPLOADS_PAGE_SIZE || totalUploads === 0) return null
+
+    const totalPages = Math.max(1, Math.ceil(totalUploads / UPLOADS_PAGE_SIZE))
+    const start = (uploadsPage - 1) * UPLOADS_PAGE_SIZE + 1
+    const end = Math.min(uploadsPage * UPLOADS_PAGE_SIZE, totalUploads)
+
+    return (
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-4">
+        <p className="text-sm text-muted-foreground">
+          Mostrando {start} - {end} de {totalUploads} uploads
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 cursor-pointer"
+            disabled={uploadsPage === 1 || isLoadingUploads}
+            onClick={() => loadMyUploads(1)}
+            title="Primeira página"
+          >
+            <ChevronsLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 cursor-pointer"
+            disabled={uploadsPage === 1 || isLoadingUploads}
+            onClick={() => loadMyUploads(uploadsPage - 1)}
+            title="Página anterior"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Página {uploadsPage} de {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 cursor-pointer"
+            disabled={uploadsPage === totalPages || isLoadingUploads}
+            onClick={() => loadMyUploads(uploadsPage + 1)}
+            title="Próxima página"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 cursor-pointer"
+            disabled={uploadsPage === totalPages || isLoadingUploads}
+            onClick={() => loadMyUploads(totalPages)}
+            title="Última página"
+          >
+            <ChevronsRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -340,22 +446,65 @@ function UploadsPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="upload-discipline">Disciplina</Label>
-                <Select
-                  value={disciplineId}
-                  onValueChange={setDisciplineId}
-                  disabled={isLoadingDisciplines || lockedFields.discipline}
-                >
-                  <SelectTrigger id="upload-discipline" className="cursor-pointer">
-                    <SelectValue placeholder={isLoadingDisciplines ? "Carregando..." : "Selecione a disciplina"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {disciplines.map((disc) => (
-                      <SelectItem key={disc.id} value={disc.id} className="cursor-pointer">
-                        {disc.code} - {disc.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={disciplineDropdownOpen} onOpenChange={setDisciplineDropdownOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="upload-discipline"
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={disciplineDropdownOpen}
+                      disabled={isLoadingDisciplines || lockedFields.discipline}
+                      className={cn(
+                        "w-full justify-between cursor-pointer",
+                        !selectedDiscipline && "text-muted-foreground hover:text-muted-foreground",
+                      )}
+                    >
+                      <span className="truncate text-left">
+                        {selectedDiscipline
+                          ? `${selectedDiscipline.code} - ${selectedDiscipline.name}`
+                          : isLoadingDisciplines
+                            ? "Carregando..."
+                            : "Selecione a disciplina"}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                    <div className="p-2 border-b">
+                      <Input
+                        value={disciplineSearch}
+                        onChange={(e) => setDisciplineSearch(e.target.value)}
+                        placeholder="Buscar disciplina..."
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="max-h-64 overflow-y-auto p-1">
+                      {filteredDisciplines.length === 0 ? (
+                        <p className="px-2 py-3 text-sm text-muted-foreground">Nenhuma disciplina encontrada.</p>
+                      ) : (
+                        filteredDisciplines.map((disc) => (
+                          <button
+                            key={disc.id}
+                            type="button"
+                            onClick={() => handleSelectDiscipline(disc.id)}
+                            className={cn(
+                              "w-full flex items-center justify-between rounded-sm px-2 py-1.5 text-sm text-left cursor-pointer hover:bg-accent hover:text-accent-foreground",
+                              disciplineId === disc.id && "bg-accent",
+                            )}
+                          >
+                            <span className="truncate">
+                              {disc.code} - {disc.name}
+                            </span>
+                            <Check
+                              className={cn("h-4 w-4", disciplineId === disc.id ? "opacity-100" : "opacity-0")}
+                            />
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-2">
@@ -408,10 +557,10 @@ function UploadsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="upload-professor">Professor (opcional)</Label>
+                <Label htmlFor="upload-professor">Professor(a) (opcional)</Label>
                 <Input
                   id="upload-professor"
-                  placeholder="Ex: Prof. João Silva"
+                  placeholder="Ex: Professor(a) Maria Silva"
                   value={professor}
                   onChange={(e) => setProfessor(e.target.value)}
                   disabled={lockedFields.professor}
@@ -446,7 +595,7 @@ function UploadsPage() {
               <Button
                 type="submit"
                 className="w-full cursor-pointer"
-                disabled={isUploading || !selectedFile || isPrefillingRequest}
+                disabled={isUploading || isPrefillingRequest || !isUploadFormValid}
               >
                 {isPrefillingRequest ? (
                   <>
@@ -483,7 +632,7 @@ function UploadsPage() {
             </div>
             <div>
               <h4 className="font-medium text-foreground mb-1">Tamanho máximo</h4>
-              <p>50 MB por arquivo</p>
+              <p>10 MB por arquivo</p>
             </div>
             <div>
               <h4 className="font-medium text-foreground mb-1">Gabarito</h4>
@@ -517,36 +666,39 @@ function UploadsPage() {
               <p>Você ainda não enviou nenhum material</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {uploads.map((upload) => (
-                <Card
-                  key={upload.id}
-                  className="cursor-pointer hover:bg-muted transition-colors"
-                  onClick={() => setSelectedUpload(upload)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-mono font-semibold text-primary">{upload.disciplineCode}</span>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {uploads.map((upload) => (
+                  <Card
+                    key={upload.id}
+                    className="cursor-pointer hover:bg-muted transition-colors"
+                    onClick={() => setSelectedUpload(upload)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-mono font-semibold text-primary">{upload.disciplineCode}</span>
+                          </div>
+                          <h3 className="font-medium text-sm line-clamp-2 mb-2">{upload.title}</h3>
                         </div>
-                        <h3 className="font-medium text-sm line-clamp-2 mb-2">{upload.title}</h3>
                       </div>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>{new Date(upload.uploadedAt).toLocaleDateString("pt-BR")}</span>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>{new Date(upload.uploadedAt).toLocaleDateString("pt-BR")}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Download className="h-3 w-3" />
+                          <span>{upload.downloads}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Download className="h-3 w-3" />
-                        <span>{upload.downloads}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              {renderUploadsPagination()}
+            </>
           )}
         </CardContent>
       </Card>

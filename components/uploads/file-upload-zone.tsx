@@ -13,9 +13,16 @@ interface FileUploadZoneProps {
   selectedFile: File | null
   accept?: string
   pdfOnly?: boolean
+  maxFileSizeMB?: number
 }
 
-export function FileUploadZone({ onFileSelect, selectedFile, accept = ".pdf", pdfOnly = true }: FileUploadZoneProps) {
+export function FileUploadZone({
+  onFileSelect,
+  selectedFile,
+  accept = ".pdf",
+  pdfOnly = true,
+  maxFileSizeMB = 10,
+}: FileUploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
 
@@ -57,6 +64,12 @@ export function FileUploadZone({ onFileSelect, selectedFile, accept = ".pdf", pd
       return
     }
 
+    const maxSizeBytes = maxFileSizeMB * 1024 * 1024
+    if (file.size > maxSizeBytes) {
+      alert(`O arquivo não pode ser maior que ${maxFileSizeMB}MB`)
+      return
+    }
+
     onFileSelect(file)
     setPreview(null)
   }
@@ -93,8 +106,8 @@ export function FileUploadZone({ onFileSelect, selectedFile, accept = ".pdf", pd
               <p className="text-sm text-muted-foreground mb-4">ou clique para selecionar</p>
               <p className="text-xs text-muted-foreground mt-4">
                 {pdfOnly
-                  ? "Formato aceito: PDF (máx. 50MB)"
-                  : "Formatos aceitos: PDF, DOC, DOCX, PPT, PPTX, TXT (máx. 50MB)"}
+                  ? `Formato aceito: PDF (máx. ${maxFileSizeMB}MB)`
+                  : `Formatos aceitos: PDF, DOC, DOCX, PPT, PPTX, TXT (máx. ${maxFileSizeMB}MB)`}
               </p>
             </div>
           </label>

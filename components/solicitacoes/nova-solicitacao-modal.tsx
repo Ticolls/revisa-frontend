@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -16,11 +16,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Send, Clock } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Plus, Send, Clock, Check, ChevronsUpDown } from "lucide-react"
 import { toast } from "sonner"
 import { requestService } from "@/lib/api/services/request.service"
 import { disciplineService } from "@/lib/api/services/discipline.service"
 import { MaterialType, type Discipline } from "@/lib/api/types"
+import { cn } from "@/lib/utils"
 
 interface NovaSolicitacaoModalProps {
   onSuccess?: () => void
@@ -38,12 +40,30 @@ export function NovaSolicitacaoModal({ onSuccess }: NovaSolicitacaoModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingDisciplines, setIsLoadingDisciplines] = useState(false)
   const [disciplines, setDisciplines] = useState<Discipline[]>([])
+  const [disciplineDropdownOpen, setDisciplineDropdownOpen] = useState(false)
+  const [disciplineSearch, setDisciplineSearch] = useState("")
 
   const [disciplineId, setDisciplineId] = useState<string>("")
   const [materialType, setMaterialType] = useState<MaterialType | "">("")
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [professor, setProfessor] = useState("")
+
+  const selectedDiscipline = useMemo(
+    () => disciplines.find((discipline) => discipline.id === disciplineId),
+    [disciplines, disciplineId],
+  )
+
+  const filteredDisciplines = useMemo(() => {
+    const query = disciplineSearch.trim().toLowerCase()
+
+    if (!query) return disciplines
+
+    return disciplines.filter((discipline) => {
+      const label = `${discipline.code} ${discipline.name}`.toLowerCase()
+      return label.includes(query)
+    })
+  }, [disciplines, disciplineSearch])
 
   useEffect(() => {
     const fetchDisciplines = async () => {
@@ -64,11 +84,19 @@ export function NovaSolicitacaoModal({ onSuccess }: NovaSolicitacaoModalProps) {
 
   const resetForm = () => {
     setDisciplineId("")
+    setDisciplineDropdownOpen(false)
+    setDisciplineSearch("")
     setMaterialType("")
     setTitle("")
     setDescription("")
     setProfessor("")
     setIsSubmitting(false)
+  }
+
+  const handleSelectDiscipline = (id: string) => {
+    setDisciplineId(id)
+    setDisciplineDropdownOpen(false)
+    setDisciplineSearch("")
   }
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -124,24 +152,63 @@ export function NovaSolicitacaoModal({ onSuccess }: NovaSolicitacaoModalProps) {
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="space-y-2">
             <Label htmlFor="modal-discipline">Disciplina</Label>
-            <Select
-              value={disciplineId}
-              onValueChange={setDisciplineId}
-              disabled={isLoadingDisciplines || disciplines.length === 0}
-            >
-              <SelectTrigger id="modal-discipline" className="cursor-pointer">
-                <SelectValue
-                  placeholder={isLoadingDisciplines ? "Carregando..." : "Selecione a disciplina"}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {disciplines.map((disc) => (
-                  <SelectItem key={disc.id} value={disc.id} className="cursor-pointer">
-                    {disc.code} - {disc.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={disciplineDropdownOpen} onOpenChange={setDisciplineDropdownOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  id="modal-discipline"
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={disciplineDropdownOpen}
+                  disabled={isLoadingDisciplines || disciplines.length === 0}
+                  className={cn(
+                    "w-full justify-between cursor-pointer",
+                    !selectedDiscipline && "text-muted-foreground hover:text-muted-foreground",
+                  )}
+                >
+                  <span className="truncate text-left">
+                    {selectedDiscipline
+                      ? `${selectedDiscipline.code} - ${selectedDiscipline.name}`
+                      : isLoadingDisciplines
+                        ? "Carregando..."
+                        : "Selecione a disciplina"}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                <div className="p-2 border-b">
+                  <Input
+                    value={disciplineSearch}
+                    onChange={(e) => setDisciplineSearch(e.target.value)}
+                    placeholder="Buscar disciplina..."
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="max-h-64 overflow-y-auto p-1">
+                  {filteredDisciplines.length === 0 ? (
+                    <p className="px-2 py-3 text-sm text-muted-foreground">Nenhuma disciplina encontrada.</p>
+                  ) : (
+                    filteredDisciplines.map((disc) => (
+                      <button
+                        key={disc.id}
+                        type="button"
+                        onClick={() => handleSelectDiscipline(disc.id)}
+                        className={cn(
+                          "w-full flex items-center justify-between rounded-sm px-2 py-1.5 text-sm text-left cursor-pointer hover:bg-accent hover:text-accent-foreground",
+                          disciplineId === disc.id && "bg-accent",
+                        )}
+                      >
+                        <span className="truncate">
+                          {disc.code} - {disc.name}
+                        </span>
+                        <Check className={cn("h-4 w-4", disciplineId === disc.id ? "opacity-100" : "opacity-0")} />
+                      </button>
+                    ))
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
             {!isLoadingDisciplines && disciplines.length === 0 && (
               <p className="text-xs text-muted-foreground">Nenhuma disciplina disponível no momento.</p>
             )}
@@ -174,10 +241,10 @@ export function NovaSolicitacaoModal({ onSuccess }: NovaSolicitacaoModalProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="modal-professor">Professor (opcional)</Label>
+            <Label htmlFor="modal-professor">Professor(a) (opcional)</Label>
             <Input
               id="modal-professor"
-              placeholder="Ex: Prof. João Silva"
+              placeholder="Ex: Professor(a) Maria Silva"
               value={professor}
               onChange={(e) => setProfessor(e.target.value)}
             />
