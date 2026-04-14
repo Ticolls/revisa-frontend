@@ -379,12 +379,12 @@ function RequestsPage() {
                     )}
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span>Solicitado por {request.authorName}</span>
-                      <span>•</span>
-                      <span>{formatDate(request.createdAt)}</span>
+                      <span className="hidden sm:inline">•</span>
+                      <span className="hidden sm:inline">{formatDate(request.createdAt)}</span>
                       {request.professor && (
                         <>
-                          <span>•</span>
-                          <span>Prof. {request.professor}</span>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="hidden sm:inline">Prof. {request.professor}</span>
                         </>
                       )}
                     </div>
@@ -500,12 +500,12 @@ function RequestsPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-professor">Professor (opcional)</Label>
+              <Label htmlFor="edit-professor">Professor(a) (opcional)</Label>
               <Input
                 id="edit-professor"
                 value={editingProfessor}
                 onChange={(e) => setEditingProfessor(e.target.value)}
-                placeholder="Prof. Fulano"
+                placeholder="Professor(a) Fulano(a)"
               />
             </div>
             <div className="space-y-2">

@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Textarea } from "@/components/ui/textarea"
 import {
-  ArrowLeft,
   Download,
   Flag,
   FileText,
@@ -44,6 +43,7 @@ import {
   HardDrive,
   Loader2,
   Heart,
+  Upload,
 } from "lucide-react"
 import Link from "next/link"
 import { withAuth } from "@/lib/auth/protected-route"
@@ -80,6 +80,7 @@ const ITEMS_PER_PAGE = 12
 
 function DisciplinePage() {
   const params = useParams()
+  const router = useRouter()
   const disciplineCode = params.id as string
 
   const [discipline, setDiscipline] = useState<Discipline | null>(null)
@@ -307,6 +308,20 @@ function DisciplinePage() {
     setMaterialDetailsOpen(true)
   }
 
+  const handleAddMaterial = () => {
+    if (!discipline) {
+      return
+    }
+
+    const params = new URLSearchParams({
+      disciplineId: discipline.id,
+      disciplineCode: discipline.code,
+      disciplineName: discipline.name,
+    })
+
+    router.push(`/home/uploads?${params.toString()}`)
+  }
+
   if (isLoadingDiscipline) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -334,12 +349,22 @@ function DisciplinePage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <Button variant="ghost" asChild className="mb-4 cursor-pointer">
-          <Link href="/home/disciplinas">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar para Disciplinas
-          </Link>
-        </Button>
+        <nav aria-label="Breadcrumb" className="mb-4">
+          <ol className="flex items-center gap-2 text-sm">
+            <li>
+              <Link
+                href="/home/disciplinas"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Disciplinas
+              </Link>
+            </li>
+            <li aria-hidden="true" className="text-muted-foreground">
+              &gt;
+            </li>
+            <li className="font-medium text-foreground truncate max-w-[70vw] sm:max-w-none">{discipline.name}</li>
+          </ol>
+        </nav>
 
         <Card>
           <CardHeader>
@@ -351,14 +376,20 @@ function DisciplinePage() {
                 <CardTitle className="text-2xl">{discipline.name}</CardTitle>
                 <CardDescription>Semestre {discipline.semester}</CardDescription>
               </div>
-              <Button
-                variant={isFavorite ? "default" : "outline"}
-                size="icon"
-                onClick={toggleDisciplineFavorite}
-                className="cursor-pointer"
-              >
-                <Heart className={`h-4 w-4 ${isFavorite ? "fill-current" : ""}`} />
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button onClick={handleAddMaterial} className="cursor-pointer" aria-label="Adicionar material">
+                  <Upload className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Adicionar material</span>
+                </Button>
+                <Button
+                  variant={isFavorite ? "default" : "outline"}
+                  size="icon"
+                  onClick={toggleDisciplineFavorite}
+                  className="cursor-pointer"
+                >
+                  <Heart className={`h-4 w-4 ${isFavorite ? "fill-current" : ""}`} />
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -722,7 +753,7 @@ function DisciplinePage() {
 
                   {selectedMaterial.professor && (
                     <div className="space-y-1 col-span-2">
-                      <p className="text-sm font-medium text-muted-foreground">Professor</p>
+                      <p className="text-sm font-medium text-muted-foreground">Professor(a)</p>
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-muted-foreground" />
                         <p className="text-sm font-medium">{selectedMaterial.professor}</p>
