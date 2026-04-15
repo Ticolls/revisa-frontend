@@ -116,6 +116,7 @@ export interface DisciplineFilters {
   search?: string
   semester?: number
   onlyFavorites?: boolean
+  sortBy?: "name" | "code" | "materials"
   page?: number
   limit?: number
 }
@@ -176,6 +177,16 @@ export interface CreateMaterialRequest {
   disciplineId: string
   professor?: string
   file: File
+  answerKey?: File
+}
+
+export interface UpdateMaterialRequest {
+  title?: string
+  description?: string
+  type?: MaterialType
+  disciplineId?: string
+  professor?: string
+  file?: File
   answerKey?: File
 }
 

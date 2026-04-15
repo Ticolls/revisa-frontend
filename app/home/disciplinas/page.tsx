@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -61,6 +61,7 @@ function DisciplinesPage() {
           search: debouncedSearchTerm || undefined,
           semester: semesterFilter !== "all" ? Number.parseInt(semesterFilter) : undefined,
           onlyFavorites: showFavoritesOnly || undefined,
+          sortBy: sortBy as "name" | "code" | "materials",
         }
 
         const response = await disciplineService.getDisciplines(filters)
@@ -90,20 +91,7 @@ function DisciplinesPage() {
     fetchDisciplines()
   }, [currentPage, debouncedSearchTerm, semesterFilter, showFavoritesOnly])
 
-  const sortedDisciplines = useMemo(() => {
-    return [...disciplines].sort((a, b) => {
-      if (sortBy === "name") return a.name.localeCompare(b.name)
-      if (sortBy === "code") return a.code.localeCompare(b.code)
-      if (sortBy === "materials") {
-        const aMaterials = a._count?.materials || 0
-        const bMaterials = b._count?.materials || 0
-        return bMaterials - aMaterials
-      }
-      return 0
-    })
-  }, [disciplines, sortBy])
-
-  const filteredDisciplines = sortedDisciplines
+  const filteredDisciplines = disciplines
 
   const totalPages = Math.ceil(totalDisciplines / ITEMS_PER_PAGE)
 

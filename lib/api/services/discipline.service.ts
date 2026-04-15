@@ -15,6 +15,7 @@ class DisciplineService {
     if (filters?.search) params.append("search", filters.search)
     if (filters?.semester) params.append("semester", filters.semester.toString())
     if (filters?.onlyFavorites) params.append("onlyFavorites", "true")
+    if (filters?.sortBy) params.append("sortBy", filters.sortBy)
     if (filters?.page) params.append("page", filters.page.toString())
     if (filters?.limit) params.append("limit", filters.limit.toString())
 
