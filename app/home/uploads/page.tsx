@@ -70,6 +70,9 @@ const createUnlockedFields = (): LockedFields => ({
 })
 
 const UPLOADS_PAGE_SIZE = 10
+const TITLE_MAX_LENGTH = 100
+const DESCRIPTION_MAX_LENGTH = 300
+const PROFESSOR_MAX_LENGTH = 50
 
 function UploadsPage() {
   const [isUploading, setIsUploading] = useState(false)
@@ -146,7 +149,7 @@ function UploadsPage() {
     const fetchDisciplines = async () => {
       try {
         setIsLoadingDisciplines(true)
-        const response = await disciplineService.getDisciplines({ limit: 100 })
+        const response = await disciplineService.getDisciplines({ limit: 1000 })
         setDisciplines(response.disciplines)
       } catch (error) {
         console.error("Erro ao carregar disciplinas:", error)
@@ -177,8 +180,8 @@ function UploadsPage() {
 
     if (disciplineIdParam) setDisciplineId(disciplineIdParam)
     if (materialTypeParam) setMaterialType(materialTypeParam)
-    if (titleParam) setTitle(titleParam)
-    if (professorParam) setProfessor(professorParam)
+    if (titleParam) setTitle(titleParam.slice(0, TITLE_MAX_LENGTH))
+    if (professorParam) setProfessor(professorParam.slice(0, PROFESSOR_MAX_LENGTH))
 
     if (requestId && requestUser && disciplineCodeParam && disciplineName) {
       setDescription("")
@@ -222,9 +225,9 @@ function UploadsPage() {
 
         setDisciplineId(request.disciplineId)
         setMaterialType(request.type ?? "")
-        setTitle(request.title)
-        setDescription(request.description ?? "")
-        setProfessor(request.professor ?? "")
+        setTitle(request.title.slice(0, TITLE_MAX_LENGTH))
+        setDescription((request.description ?? "").slice(0, DESCRIPTION_MAX_LENGTH))
+        setProfessor((request.professor ?? "").slice(0, PROFESSOR_MAX_LENGTH))
         setAttendingRequest({
           id: request.id,
           user: request.authorName,
@@ -258,7 +261,11 @@ function UploadsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!disciplineId || !materialType || !title || !selectedFile) {
+    const normalizedTitle = title.trim()
+    const normalizedDescription = description.trim()
+    const normalizedProfessor = professor.trim()
+
+    if (!disciplineId || !materialType || !normalizedTitle || !selectedFile) {
       toast.error("Preencha todos os campos obrigatórios")
       return
     }
@@ -267,11 +274,11 @@ function UploadsPage() {
       setIsUploading(true)
 
       const payload: CreateMaterialRequest = {
-        title,
-        description,
+        title: normalizedTitle,
+        description: normalizedDescription,
         type: materialType as MaterialType,
         disciplineId,
-        professor: professor || undefined,
+        professor: normalizedProfessor || undefined,
         file: selectedFile,
         answerKey: selectedGabarito || undefined,
       }
@@ -535,36 +542,57 @@ function UploadsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="upload-title">Título do Material</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="upload-title">Título do Material</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {title.length}/{TITLE_MAX_LENGTH}
+                  </span>
+                </div>
                 <Input
                   id="upload-title"
                   placeholder="Ex: Resumo de Árvores Binárias"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
+                  maxLength={TITLE_MAX_LENGTH}
                   disabled={lockedFields.title}
                 />
+                <p className="text-xs text-muted-foreground">Máximo de {TITLE_MAX_LENGTH} caracteres.</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="upload-description">Descrição (opcional)</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="upload-description">Descrição (opcional)</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {description.length}/{DESCRIPTION_MAX_LENGTH}
+                  </span>
+                </div>
                 <Textarea
                   id="upload-description"
                   placeholder="Adicione uma descrição sobre o material..."
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                  maxLength={DESCRIPTION_MAX_LENGTH}
                 />
+                <p className="text-xs text-muted-foreground">Máximo de {DESCRIPTION_MAX_LENGTH} caracteres.</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="upload-professor">Professor(a) (opcional)</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="upload-professor">Professor(a) (opcional)</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {professor.length}/{PROFESSOR_MAX_LENGTH}
+                  </span>
+                </div>
                 <Input
                   id="upload-professor"
                   placeholder="Ex: Professor(a) Maria Silva"
                   value={professor}
                   onChange={(e) => setProfessor(e.target.value)}
+                  maxLength={PROFESSOR_MAX_LENGTH}
                   disabled={lockedFields.professor}
                 />
+                <p className="text-xs text-muted-foreground">Máximo de {PROFESSOR_MAX_LENGTH} caracteres.</p>
               </div>
 
               <div className="space-y-2">
@@ -667,23 +695,25 @@ function UploadsPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {uploads.map((upload) => (
                   <Card
                     key={upload.id}
-                    className="cursor-pointer hover:bg-muted transition-colors"
+                    className="h-36 cursor-pointer hover:bg-muted transition-colors"
                     onClick={() => setSelectedUpload(upload)}
                   >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-2">
+                    <CardContent className="p-3 h-full flex flex-col">
+                      <div className="flex items-start justify-between mb-1">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-0.5">
                             <span className="text-xs font-mono font-semibold text-primary">{upload.disciplineCode}</span>
                           </div>
-                          <h3 className="font-medium text-sm line-clamp-2 mb-2">{upload.title}</h3>
+                          <h3 className="font-medium text-sm mb-1 min-h-9 overflow-hidden [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical] [overflow-wrap:anywhere]">
+                            {upload.title}
+                          </h3>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <div className="mt-auto flex items-center justify-between text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
                           <span>{new Date(upload.uploadedAt).toLocaleDateString("pt-BR")}</span>
@@ -704,9 +734,9 @@ function UploadsPage() {
       </Card>
 
       <Dialog open={!!selectedUpload} onOpenChange={(open) => !open && setSelectedUpload(null)}>
-        <DialogContent className="max-w-[calc(100vw-2rem)]">
+        <DialogContent className="max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
-            <DialogTitle>{selectedUpload?.title}</DialogTitle>
+            <DialogTitle className="[overflow-wrap:anywhere]">{selectedUpload?.title}</DialogTitle>
             <DialogDescription>Detalhes do material enviado</DialogDescription>
           </DialogHeader>
 
@@ -714,7 +744,7 @@ function UploadsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-medium text-muted-foreground mb-1">Disciplina</p>
-                <p className="text-sm">
+                <p className="text-sm [overflow-wrap:anywhere]">
                   {selectedUpload?.disciplineCode} - {selectedUpload?.disciplineName}
                 </p>
               </div>
@@ -723,6 +753,13 @@ function UploadsPage() {
                 <p className="text-sm">{selectedUpload ? (selectedUpload.fileSize / 1024 / 1024).toFixed(2) : 0} MB</p>
               </div>
             </div>
+
+            {selectedUpload?.description?.trim() && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Descrição</p>
+                <p className="text-sm [overflow-wrap:anywhere]">{selectedUpload.description}</p>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div>
