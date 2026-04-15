@@ -40,6 +40,7 @@ import { withAdminAuth } from "@/lib/auth/protected-route"
 import { adminService } from "@/lib/api/services/admin.service"
 
 const ITEMS_PER_PAGE = 10
+const SEARCH_DEBOUNCE_MS = 500
 
 function AdminDisciplinesPage() {
   const [mounted, setMounted] = useState(false)
@@ -52,15 +53,24 @@ function AdminDisciplinesPage() {
   const [disciplineForm, setDisciplineForm] = useState({ code: "", name: "", semester: 1 })
   const [disciplineToDelete, setDisciplineToDelete] = useState<Discipline | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
   useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, SEARCH_DEBOUNCE_MS)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [searchQuery])
+
+  useEffect(() => {
     if (!mounted) return
-    loadDisciplines(currentPage, searchQuery)
-  }, [mounted, currentPage, searchQuery])
+    loadDisciplines(currentPage, debouncedSearchQuery)
+  }, [mounted, currentPage, debouncedSearchQuery])
 
   const loadDisciplines = async (page = 1, search = "") => {
     try {
@@ -110,7 +120,7 @@ function AdminDisciplinesPage() {
         await adminService.createDiscipline(disciplineForm)
         toast.success("Disciplina criada com sucesso")
       }
-      loadDisciplines(currentPage, searchQuery)
+      loadDisciplines(currentPage, debouncedSearchQuery)
       setShowDisciplineDialog(false)
       setEditingDiscipline(null)
       setDisciplineForm({ code: "", name: "", semester: 1 })
@@ -125,7 +135,7 @@ function AdminDisciplinesPage() {
     try {
       await adminService.deleteDiscipline(disciplineToDelete.id)
       toast.success("Disciplina excluída com sucesso")
-      loadDisciplines(currentPage, searchQuery)
+      loadDisciplines(currentPage, debouncedSearchQuery)
     } catch (error) {
       toast.error("Erro ao excluir disciplina")
     } finally {

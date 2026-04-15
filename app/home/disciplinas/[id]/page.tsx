@@ -77,6 +77,7 @@ const sortOptions = [
 ]
 
 const ITEMS_PER_PAGE = 12
+const SEARCH_DEBOUNCE_MS = 500
 
 function DisciplinePage() {
   const params = useParams()
@@ -92,6 +93,7 @@ function DisciplinePage() {
   const [error, setError] = useState<string | null>(null)
 
   const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
   const [materialTypeFilter, setMaterialTypeFilter] = useState("all")
   const [sortBy, setSortBy] = useState("recent")
   const [currentPage, setCurrentPage] = useState(1)
@@ -124,6 +126,14 @@ function DisciplinePage() {
   }, [disciplineCode])
 
   useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, SEARCH_DEBOUNCE_MS)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [searchQuery])
+
+  useEffect(() => {
     const fetchMaterials = async () => {
       if (!discipline) {
         return
@@ -137,8 +147,8 @@ function DisciplinePage() {
           limit: ITEMS_PER_PAGE,
         }
 
-        if (searchQuery.trim()) {
-          filters.search = searchQuery.trim()
+        if (debouncedSearchQuery.trim()) {
+          filters.search = debouncedSearchQuery.trim()
         }
 
         if (materialTypeFilter !== "all") {
@@ -159,7 +169,7 @@ function DisciplinePage() {
 
     fetchMaterials()
 
-  }, [discipline, currentPage, searchQuery, materialTypeFilter])
+  }, [discipline, currentPage, debouncedSearchQuery, materialTypeFilter])
 
   // Ordenação local dos materiais
   const sortedMaterials = useMemo(() => {
@@ -416,7 +426,7 @@ function DisciplinePage() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por título, descrição ou autor..."
+            placeholder="Buscar por título, descrição ou professor..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 pr-10"
@@ -518,10 +528,10 @@ function DisciplinePage() {
             return (
               <Card
                 key={material.id}
-                className="hover:border-primary transition-colors cursor-pointer"
-              onClick={() => openMaterialDetails(material)}
-            >
-              <CardHeader className="pb-3">
+                className="h-full hover:border-primary transition-colors cursor-pointer flex flex-col"
+                onClick={() => openMaterialDetails(material)}
+              >
+              <CardHeader className="pb-3 min-h-[96px]">
                 <div className="flex items-start justify-between mb-2">
                   <Badge variant="outline" className="text-xs">
                     {getTypeLabel(material.type)}
@@ -530,8 +540,14 @@ function DisciplinePage() {
                 </div>
                 <CardTitle className="text-base line-clamp-2">{material.title}</CardTitle>
               </CardHeader>
-              <CardContent className="pt-0">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <CardContent className="pt-0 flex-1 flex flex-col">
+                <div className="mb-3 flex items-center gap-1 text-xs text-muted-foreground">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="truncate">
+                    {material.professor?.trim() ? material.professor : "Professor(a) não informado"}
+                  </span>
+                </div>
+                <div className="mt-auto flex items-center justify-between text-xs text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span>{new Date(material.uploadedAt).toLocaleDateString("pt-BR")}</span>

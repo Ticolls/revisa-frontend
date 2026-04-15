@@ -41,6 +41,7 @@ import { adminService } from "@/lib/api/services/admin.service"
 import { withAdminAuth } from "@/lib/auth/protected-route"
 
 const ITEMS_PER_PAGE = 10
+const SEARCH_DEBOUNCE_MS = 500
 
 function AdminMaterialsPage() {
   const [mounted, setMounted] = useState(false)
@@ -52,6 +53,15 @@ function AdminMaterialsPage() {
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null)
   const [materialForm, setMaterialForm] = useState({ title: "", description: "" })
   const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, SEARCH_DEBOUNCE_MS)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [searchQuery])
 
   useEffect(() => {
     setMounted(true)
@@ -71,16 +81,16 @@ function AdminMaterialsPage() {
 
   const filteredMaterials = useMemo(() => {
     if (!materials) return []
-    if (!searchQuery.trim()) return materials
+    if (!debouncedSearchQuery.trim()) return materials
 
-    const query = searchQuery.toLowerCase()
+    const query = debouncedSearchQuery.toLowerCase()
     return materials.filter(
       (m) =>
         m.title.toLowerCase().includes(query) ||
         m.disciplineCode.toLowerCase().includes(query) ||
         m.authorName.toLowerCase().includes(query),
     )
-  }, [materials, searchQuery])
+  }, [materials, debouncedSearchQuery])
 
   const paginatedMaterials = useMemo(() => {
     if (!filteredMaterials) return []

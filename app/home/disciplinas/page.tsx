@@ -25,9 +25,11 @@ interface DisciplineWithFavorite {
 }
 
 const ITEMS_PER_PAGE = 12
+const SEARCH_DEBOUNCE_MS = 500
 
 function DisciplinesPage() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
   const [semesterFilter, setSemesterFilter] = useState<string>("all")
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const [sortBy, setSortBy] = useState<string>("name")
@@ -37,6 +39,14 @@ function DisciplinesPage() {
   const [totalDisciplines, setTotalDisciplines] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageJumpInput, setPageJumpInput] = useState("")
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+    }, SEARCH_DEBOUNCE_MS)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [searchTerm])
 
   // Buscar disciplinas do backend
   useEffect(() => {
@@ -48,7 +58,7 @@ function DisciplinesPage() {
         const filters = {
           page: currentPage,
           limit: ITEMS_PER_PAGE,
-          search: searchTerm || undefined,
+          search: debouncedSearchTerm || undefined,
           semester: semesterFilter !== "all" ? Number.parseInt(semesterFilter) : undefined,
           onlyFavorites: showFavoritesOnly || undefined,
         }
@@ -78,7 +88,7 @@ function DisciplinesPage() {
     }
 
     fetchDisciplines()
-  }, [currentPage, searchTerm, semesterFilter, showFavoritesOnly])
+  }, [currentPage, debouncedSearchTerm, semesterFilter, showFavoritesOnly])
 
   const sortedDisciplines = useMemo(() => {
     return [...disciplines].sort((a, b) => {

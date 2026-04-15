@@ -42,6 +42,7 @@ import { Request } from "@/lib/api/types"
 import { withAdminAuth } from "@/lib/auth/protected-route"
 
 const ITEMS_PER_PAGE = 10
+const SEARCH_DEBOUNCE_MS = 500
 
 function AdminRequestsPage() {
   const [loading, setLoading] = useState(true)
@@ -52,6 +53,15 @@ function AdminRequestsPage() {
   const [editingRequest, setEditingRequest] = useState<Request | null>(null)
   const [requestStatus, setRequestStatus] = useState<"pending" | "fulfilled" | "rejected">("pending")
   const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, SEARCH_DEBOUNCE_MS)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [searchQuery])
 
   useEffect(() => {
     loadRequests()
@@ -68,16 +78,16 @@ function AdminRequestsPage() {
   }
 
   const filteredRequests = useMemo(() => {
-    if (!searchQuery.trim()) return requests
+    if (!debouncedSearchQuery.trim()) return requests
 
-    const query = searchQuery.toLowerCase()
+    const query = debouncedSearchQuery.toLowerCase()
     return requests.filter(
       (r) =>
         r.title.toLowerCase().includes(query) ||
         r.disciplineCode.toLowerCase().includes(query) ||
         r.authorName.toLowerCase().includes(query),
     )
-  }, [requests, searchQuery])
+  }, [requests, debouncedSearchQuery])
 
   const paginatedRequests = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE

@@ -33,6 +33,7 @@ import { materialService } from "@/lib/api/services/material.service"
 import { Report } from "@/lib/api/types"
 
 const ITEMS_PER_PAGE = 10
+const SEARCH_DEBOUNCE_MS = 500
 
 function AdminReportsPage() {
   const [loading, setLoading] = useState(true)
@@ -40,7 +41,16 @@ function AdminReportsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedReport, setSelectedReport] = useState<Report | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "resolved" | "rejected">("all")
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, SEARCH_DEBOUNCE_MS)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [searchQuery])
 
   useEffect(() => {
     loadReports()
@@ -63,8 +73,8 @@ function AdminReportsPage() {
       filtered = filtered.filter((r) => r.status === statusFilter)
     }
 
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
+    if (debouncedSearchQuery.trim()) {
+      const query = debouncedSearchQuery.toLowerCase()
       filtered = filtered.filter(
         (r) =>
           r.materialTitle.toLowerCase().includes(query) ||
@@ -74,7 +84,7 @@ function AdminReportsPage() {
     }
 
     return filtered
-  }, [reports, searchQuery, statusFilter])
+  }, [reports, debouncedSearchQuery, statusFilter])
 
   const paginatedReports = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE

@@ -42,6 +42,7 @@ import { useToast } from "@/lib/hooks/use-toast"
 import { withAdminAuth } from "@/lib/auth/protected-route"
 
 const ITEMS_PER_PAGE = 10
+const SEARCH_DEBOUNCE_MS = 500
 
 interface FormErrors {
   name?: string
@@ -61,8 +62,17 @@ function AdminUsersPage() {
   const [userForm, setUserForm] = useState({ name: "", email: "", password: "" })
   const [isVerifiedToggle, setIsVerifiedToggle] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
   const [formErrors, setFormErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, SEARCH_DEBOUNCE_MS)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [searchQuery])
 
   useEffect(() => {
     setMounted(true)
@@ -124,11 +134,11 @@ function AdminUsersPage() {
 
   const filteredUsers = useMemo(() => {
     if (!users) return []
-    if (!searchQuery.trim()) return users
+    if (!debouncedSearchQuery.trim()) return users
 
-    const query = searchQuery.toLowerCase()
+    const query = debouncedSearchQuery.toLowerCase()
     return users.filter((user) => user.name.toLowerCase().includes(query) || user.email.toLowerCase().includes(query))
-  }, [users, searchQuery])
+  }, [users, debouncedSearchQuery])
 
   const paginatedUsers = useMemo(() => {
     if (!filteredUsers) return []
