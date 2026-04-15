@@ -52,7 +52,8 @@ import { materialService } from "@/lib/api/services/material.service"
 import { disciplineService } from "@/lib/api/services/discipline.service"
 import { requestService } from "@/lib/api/services/request.service"
 import { toast } from "sonner"
-import type { Material, MaterialType, Discipline, CreateMaterialRequest } from "@/lib/api/types"
+import { MaterialType } from "@/lib/api/types"
+import type { Material, Discipline, CreateMaterialRequest, UpdateMaterialRequest } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 
 type LockedFields = {
@@ -73,6 +74,13 @@ const UPLOADS_PAGE_SIZE = 10
 const TITLE_MAX_LENGTH = 100
 const DESCRIPTION_MAX_LENGTH = 300
 const PROFESSOR_MAX_LENGTH = 50
+
+const MATERIAL_TYPE_OPTIONS: { value: MaterialType; label: string }[] = [
+  { value: MaterialType.EXAM, label: "Provas antigas" },
+  { value: MaterialType.EXERCISE_SHEET, label: "Listas de exercícios" },
+  { value: MaterialType.SUMMARY, label: "Resumo" },
+  { value: MaterialType.SLIDE, label: "Slides" },
+]
 
 function UploadsPage() {
   const [isUploading, setIsUploading] = useState(false)
@@ -106,6 +114,16 @@ function UploadsPage() {
   } | null>(null)
 
   const [selectedUpload, setSelectedUpload] = useState<Material | null>(null)
+  const [isUpdatingUpload, setIsUpdatingUpload] = useState(false)
+  const [editDisciplineId, setEditDisciplineId] = useState("")
+  const [editDisciplineDropdownOpen, setEditDisciplineDropdownOpen] = useState(false)
+  const [editDisciplineSearch, setEditDisciplineSearch] = useState("")
+  const [editMaterialType, setEditMaterialType] = useState<MaterialType | "">("")
+  const [editTitle, setEditTitle] = useState("")
+  const [editDescription, setEditDescription] = useState("")
+  const [editProfessor, setEditProfessor] = useState("")
+  const [replacementFile, setReplacementFile] = useState<File | null>(null)
+  const [replacementAnswerKey, setReplacementAnswerKey] = useState<File | null>(null)
   const [uploadToDelete, setUploadToDelete] = useState<Material | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isPrefillingRequest, setIsPrefillingRequest] = useState(false)
@@ -128,6 +146,38 @@ function UploadsPage() {
       return label.includes(query)
     })
   }, [disciplines, disciplineSearch])
+
+  const editRequiresGabarito = editMaterialType === "EXAM" || editMaterialType === "EXERCISE_SHEET"
+
+  const editSelectedDiscipline = useMemo(
+    () => disciplines.find((discipline) => discipline.id === editDisciplineId),
+    [disciplines, editDisciplineId],
+  )
+
+  const filteredEditDisciplines = useMemo(() => {
+    const query = editDisciplineSearch.trim().toLowerCase()
+
+    if (!query) return disciplines
+
+    return disciplines.filter((discipline) => {
+      const label = `${discipline.code} ${discipline.name}`.toLowerCase()
+      return label.includes(query)
+    })
+  }, [disciplines, editDisciplineSearch])
+
+  useEffect(() => {
+    if (!selectedUpload) return
+
+    setEditDisciplineId(selectedUpload.disciplineId)
+    setEditMaterialType(selectedUpload.type)
+    setEditTitle(selectedUpload.title)
+    setEditDescription(selectedUpload.description ?? "")
+    setEditProfessor(selectedUpload.professor ?? "")
+    setEditDisciplineDropdownOpen(false)
+    setEditDisciplineSearch("")
+    setReplacementFile(null)
+    setReplacementAnswerKey(null)
+  }, [selectedUpload])
 
   const loadMyUploads = async (page = 1) => {
     try {
@@ -346,10 +396,66 @@ function UploadsPage() {
     }
   }
 
+  const handleDownloadAnswerKey = async (upload: Material) => {
+    try {
+      const url = await materialService.downloadAnswerKey(upload.id)
+      window.open(url, "_blank")
+    } catch (error) {
+      console.error("Erro ao fazer download do gabarito:", error)
+      toast.error("Erro ao fazer download do gabarito")
+    }
+  }
+
+  const handleUpdateUpload = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!selectedUpload) return
+
+    const normalizedTitle = editTitle.trim()
+    const normalizedDescription = editDescription.trim()
+    const normalizedProfessor = editProfessor.trim()
+
+    if (!editDisciplineId || !editMaterialType || !normalizedTitle) {
+      toast.error("Preencha os campos obrigatórios")
+      return
+    }
+
+    try {
+      setIsUpdatingUpload(true)
+
+      const payload: UpdateMaterialRequest = {
+        disciplineId: editDisciplineId,
+        type: editMaterialType as MaterialType,
+        title: normalizedTitle,
+        description: normalizedDescription,
+        professor: normalizedProfessor || undefined,
+        file: replacementFile || undefined,
+        answerKey: replacementAnswerKey || undefined,
+      }
+
+      await materialService.updateMaterial(selectedUpload.id, payload)
+      toast.success("Material atualizado com sucesso")
+
+      setSelectedUpload(null)
+      await loadMyUploads(uploadsPage)
+    } catch (error) {
+      console.error("Erro ao atualizar material:", error)
+      toast.error("Erro ao atualizar material")
+    } finally {
+      setIsUpdatingUpload(false)
+    }
+  }
+
   const handleSelectDiscipline = (id: string) => {
     setDisciplineId(id)
     setDisciplineDropdownOpen(false)
     setDisciplineSearch("")
+  }
+
+  const handleSelectEditDiscipline = (id: string) => {
+    setEditDisciplineId(id)
+    setEditDisciplineDropdownOpen(false)
+    setEditDisciplineSearch("")
   }
 
   const isUploadFormValid = Boolean(
@@ -548,13 +654,15 @@ function UploadsPage() {
                     {title.length}/{TITLE_MAX_LENGTH}
                   </span>
                 </div>
-                <Input
+                <Textarea
                   id="upload-title"
                   placeholder="Ex: Resumo de Árvores Binárias"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   maxLength={TITLE_MAX_LENGTH}
                   disabled={lockedFields.title}
+                  rows={2}
+                  className="resize-none [overflow-wrap:anywhere]"
                 />
                 <p className="text-xs text-muted-foreground">Máximo de {TITLE_MAX_LENGTH} caracteres.</p>
               </div>
@@ -573,6 +681,7 @@ function UploadsPage() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   maxLength={DESCRIPTION_MAX_LENGTH}
+                  className="[overflow-wrap:anywhere]"
                 />
                 <p className="text-xs text-muted-foreground">Máximo de {DESCRIPTION_MAX_LENGTH} caracteres.</p>
               </div>
@@ -584,13 +693,15 @@ function UploadsPage() {
                     {professor.length}/{PROFESSOR_MAX_LENGTH}
                   </span>
                 </div>
-                <Input
+                <Textarea
                   id="upload-professor"
                   placeholder="Ex: Professor(a) Maria Silva"
                   value={professor}
                   onChange={(e) => setProfessor(e.target.value)}
                   maxLength={PROFESSOR_MAX_LENGTH}
                   disabled={lockedFields.professor}
+                  rows={2}
+                  className="resize-none [overflow-wrap:anywhere]"
                 />
                 <p className="text-xs text-muted-foreground">Máximo de {PROFESSOR_MAX_LENGTH} caracteres.</p>
               </div>
@@ -733,67 +844,245 @@ function UploadsPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!selectedUpload} onOpenChange={(open) => !open && setSelectedUpload(null)}>
+      <Dialog
+        open={!!selectedUpload}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedUpload(null)
+            setEditDisciplineDropdownOpen(false)
+            setEditDisciplineSearch("")
+          }
+        }}
+      >
         <DialogContent className="max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
-            <DialogTitle className="[overflow-wrap:anywhere]">{selectedUpload?.title}</DialogTitle>
-            <DialogDescription>Detalhes do material enviado</DialogDescription>
+            <DialogTitle className="[overflow-wrap:anywhere]">Editar material</DialogTitle>
+            <DialogDescription>Atualize os campos abaixo e, se quiser, substitua os arquivos.</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Disciplina</p>
-                <p className="text-sm [overflow-wrap:anywhere]">
-                  {selectedUpload?.disciplineCode} - {selectedUpload?.disciplineName}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Tamanho</p>
-                <p className="text-sm">{selectedUpload ? (selectedUpload.fileSize / 1024 / 1024).toFixed(2) : 0} MB</p>
-              </div>
+          <form onSubmit={handleUpdateUpload} className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="edit-upload-discipline">Disciplina</Label>
+              <Popover open={editDisciplineDropdownOpen} onOpenChange={setEditDisciplineDropdownOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="edit-upload-discipline"
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={editDisciplineDropdownOpen}
+                    disabled={isLoadingDisciplines}
+                    className={cn(
+                      "w-full justify-between cursor-pointer",
+                      !editSelectedDiscipline && "text-muted-foreground hover:text-muted-foreground",
+                    )}
+                  >
+                    <span className="truncate text-left">
+                      {editSelectedDiscipline
+                        ? `${editSelectedDiscipline.code} - ${editSelectedDiscipline.name}`
+                        : isLoadingDisciplines
+                          ? "Carregando..."
+                          : "Selecione a disciplina"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                  <div className="p-2 border-b">
+                    <Input
+                      value={editDisciplineSearch}
+                      onChange={(e) => setEditDisciplineSearch(e.target.value)}
+                      placeholder="Buscar disciplina..."
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="max-h-64 overflow-y-auto p-1">
+                    {filteredEditDisciplines.length === 0 ? (
+                      <p className="px-2 py-3 text-sm text-muted-foreground">Nenhuma disciplina encontrada.</p>
+                    ) : (
+                      filteredEditDisciplines.map((disc) => (
+                        <button
+                          key={disc.id}
+                          type="button"
+                          onClick={() => handleSelectEditDiscipline(disc.id)}
+                          className={cn(
+                            "w-full flex items-center justify-between rounded-sm px-2 py-1.5 text-sm text-left cursor-pointer hover:bg-accent hover:text-accent-foreground",
+                            editDisciplineId === disc.id && "bg-accent",
+                          )}
+                        >
+                          <span className="truncate">
+                            {disc.code} - {disc.name}
+                          </span>
+                          <Check
+                            className={cn("h-4 w-4", editDisciplineId === disc.id ? "opacity-100" : "opacity-0")}
+                          />
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
-            {selectedUpload?.description?.trim() && (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Descrição</p>
-                <p className="text-sm [overflow-wrap:anywhere]">{selectedUpload.description}</p>
+            <div className="space-y-2">
+              <Label htmlFor="edit-upload-type">Tipo de material</Label>
+              <Select value={editMaterialType} onValueChange={(value) => setEditMaterialType(value as MaterialType)}>
+                <SelectTrigger id="edit-upload-type" className="cursor-pointer">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MATERIAL_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value} className="cursor-pointer">
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="edit-upload-title">Título do material</Label>
+                <span className="text-xs text-muted-foreground">{editTitle.length}/{TITLE_MAX_LENGTH}</span>
+              </div>
+              <Textarea
+                id="edit-upload-title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                maxLength={TITLE_MAX_LENGTH}
+                rows={2}
+                className="resize-none [overflow-wrap:anywhere]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="edit-upload-description">Descrição</Label>
+                <span className="text-xs text-muted-foreground">{editDescription.length}/{DESCRIPTION_MAX_LENGTH}</span>
+              </div>
+              <Textarea
+                id="edit-upload-description"
+                rows={3}
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                maxLength={DESCRIPTION_MAX_LENGTH}
+                className="[overflow-wrap:anywhere]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="edit-upload-professor">Professor(a) (opcional)</Label>
+                <span className="text-xs text-muted-foreground">{editProfessor.length}/{PROFESSOR_MAX_LENGTH}</span>
+              </div>
+              <Textarea
+                id="edit-upload-professor"
+                value={editProfessor}
+                onChange={(e) => setEditProfessor(e.target.value)}
+                maxLength={PROFESSOR_MAX_LENGTH}
+                rows={2}
+                className="resize-none [overflow-wrap:anywhere]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Substituir arquivo principal (opcional)</Label>
+              <p className="text-xs text-muted-foreground">Arquivo atual: {selectedUpload?.fileName}</p>
+              <Input
+                type="file"
+                accept=".pdf,application/pdf"
+                className="cursor-pointer"
+                onChange={(e) => setReplacementFile(e.target.files?.[0] ?? null)}
+              />
+              {replacementFile && <p className="text-xs text-muted-foreground truncate">Novo arquivo: {replacementFile.name}</p>}
+            </div>
+
+            {(editRequiresGabarito || selectedUpload?.answerKeyFileName) && (
+              <div className="space-y-2">
+                <Label>Substituir gabarito (opcional)</Label>
+                {selectedUpload?.answerKeyFileName ? (
+                  <p className="text-xs text-muted-foreground">Gabarito atual: {selectedUpload.answerKeyFileName}</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Este material ainda não possui gabarito.</p>
+                )}
+                <Input
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  className="cursor-pointer"
+                  onChange={(e) => setReplacementAnswerKey(e.target.files?.[0] ?? null)}
+                />
+                {replacementAnswerKey && (
+                  <p className="text-xs text-muted-foreground truncate">Novo gabarito: {replacementAnswerKey.name}</p>
+                )}
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Data de Upload</p>
-                <p className="text-sm">{selectedUpload ? new Date(selectedUpload.uploadedAt).toLocaleDateString("pt-BR") : ""}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Downloads</p>
-                <p className="text-sm">{selectedUpload?.downloads} downloads</p>
-              </div>
-            </div>
-          </div>
+            <DialogFooter className="pt-2">
+              <div className="w-full space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => selectedUpload && handleDownload(selectedUpload)}
+                    className="cursor-pointer bg-transparent hover:text-foreground"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Baixar material
+                  </Button>
 
-          <DialogFooter className="flex justify-between items-center">
-            <div className="flex gap-2 ml-auto">
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  if (selectedUpload) {
-                    setUploadToDelete(selectedUpload)
-                    setSelectedUpload(null)
-                  }
-                }}
-                className="cursor-pointer"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir
-              </Button>
-              <Button onClick={() => selectedUpload && handleDownload(selectedUpload)} className="cursor-pointer">
-                <Download className="mr-2 h-4 w-4" />
-                Baixar
-              </Button>
-            </div>
-          </DialogFooter>
+                  {selectedUpload?.answerKeyUrl ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="cursor-pointer bg-transparent hover:text-foreground"
+                      onClick={() => selectedUpload && handleDownloadAnswerKey(selectedUpload)}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Baixar gabarito
+                    </Button>
+                  ) : (
+                    <Button type="button" variant="outline" disabled className="cursor-not-allowed">
+                      <Download className="mr-2 h-4 w-4" />
+                      Sem gabarito
+                    </Button>
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => {
+                      if (selectedUpload) {
+                        setUploadToDelete(selectedUpload)
+                        setSelectedUpload(null)
+                      }
+                    }}
+                    className="cursor-pointer sm:col-span-2"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir material
+                  </Button>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isUpdatingUpload}
+                  className="cursor-pointer w-full"
+                >
+                  {isUpdatingUpload ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="mr-2 h-4 w-4" />
+                      Salvar alterações
+                    </>
+                  )}
+                </Button>
+              </div>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

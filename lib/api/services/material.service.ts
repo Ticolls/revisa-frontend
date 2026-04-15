@@ -1,5 +1,5 @@
 import { apiClient } from "../client"
-import type { Material, MaterialFilters, CreateMaterialRequest, Download, ApiResponse } from "../types"
+import type { Material, MaterialFilters, CreateMaterialRequest, UpdateMaterialRequest, Download, ApiResponse } from "../types"
 
 class MaterialService {
   private readonly BASE_PATH = "/materials"
@@ -71,6 +71,21 @@ class MaterialService {
 
   async deleteMaterial(id: string): Promise<void> {
     await apiClient.delete<ApiResponse<void>>(`${this.BASE_PATH}/${id}`)
+  }
+
+  async updateMaterial(id: string, data: UpdateMaterialRequest): Promise<Material> {
+    const formData = new FormData()
+
+    if (data.title !== undefined) formData.append("title", data.title)
+    if (data.description !== undefined) formData.append("description", data.description)
+    if (data.type !== undefined) formData.append("type", data.type)
+    if (data.disciplineId !== undefined) formData.append("disciplineId", data.disciplineId)
+    if (data.professor !== undefined) formData.append("professor", data.professor)
+    if (data.file) formData.append("file", data.file)
+    if (data.answerKey) formData.append("answerKey", data.answerKey)
+
+    const response = await apiClient.put<ApiResponse<Material>>(`${this.BASE_PATH}/${id}`, formData)
+    return response.data!
   }
 
   async reportMaterial(materialId: string, reason: string): Promise<void> {
