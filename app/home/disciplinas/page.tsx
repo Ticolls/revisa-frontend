@@ -48,6 +48,10 @@ function DisciplinesPage() {
     return () => window.clearTimeout(timeoutId)
   }, [searchTerm])
 
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [debouncedSearchTerm, semesterFilter, showFavoritesOnly, sortBy])
+
   // Buscar disciplinas do backend
   useEffect(() => {
     const fetchDisciplines = async () => {
@@ -89,7 +93,7 @@ function DisciplinesPage() {
     }
 
     fetchDisciplines()
-  }, [currentPage, debouncedSearchTerm, semesterFilter, showFavoritesOnly])
+  }, [currentPage, debouncedSearchTerm, semesterFilter, showFavoritesOnly, sortBy])
 
   const filteredDisciplines = disciplines
 
