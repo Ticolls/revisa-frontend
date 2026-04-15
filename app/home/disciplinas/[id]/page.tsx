@@ -698,7 +698,7 @@ function DisciplinePage() {
 
       {/* Material Details Modal */}
       <Dialog open={materialDetailsOpen} onOpenChange={setMaterialDetailsOpen}>
-        <DialogContent className="max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto overflow-x-hidden">
           {selectedMaterial && (
             <>
               <DialogHeader>
@@ -707,8 +707,10 @@ function DisciplinePage() {
                     {getTypeLabel(selectedMaterial.type)}
                   </Badge>
                 </div>
-                <DialogTitle className="text-xl">{selectedMaterial.title}</DialogTitle>
-                <DialogDescription className="text-base mt-2">{selectedMaterial.description}</DialogDescription>
+                <DialogTitle className="text-xl [overflow-wrap:anywhere]">{selectedMaterial.title}</DialogTitle>
+                <DialogDescription className="text-base mt-2 [overflow-wrap:anywhere]">
+                  {selectedMaterial.description}
+                </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-4 py-4">
@@ -756,7 +758,7 @@ function DisciplinePage() {
                       <p className="text-sm font-medium text-muted-foreground">Professor(a)</p>
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-muted-foreground" />
-                        <p className="text-sm font-medium">{selectedMaterial.professor}</p>
+                        <p className="text-sm font-medium [overflow-wrap:anywhere]">{selectedMaterial.professor}</p>
                       </div>
                     </div>
                   )}
@@ -769,7 +771,7 @@ function DisciplinePage() {
                 </div>
               </div>
 
-              <DialogFooter className="flex justify-between items-center">
+              <DialogFooter className="flex-row justify-between items-center">
                 {!selectedMaterial.isOwner && (
                   <Button
                     variant="ghost"
@@ -784,7 +786,7 @@ function DisciplinePage() {
                     <Flag className="h-4 w-4" />
                   </Button>
                 )}
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-nowrap">
                   {selectedMaterial.answerKeyUrl && (
                     <Button
                       variant="outline"
@@ -792,12 +794,14 @@ function DisciplinePage() {
                       onClick={() => handleDownloadAnswerKey(selectedMaterial)}
                     >
                       <Download className="h-4 w-4 mr-2" />
-                      Baixar Gabarito
+                      <span className="sm:hidden">Gabarito</span>
+                      <span className="hidden sm:inline">Baixar Gabarito</span>
                     </Button>
                   )}
                   <Button className="cursor-pointer" onClick={() => handleDownload(selectedMaterial)}>
                     <Download className="h-4 w-4 mr-2" />
-                    Baixar Material
+                    <span className="sm:hidden">Material</span>
+                    <span className="hidden sm:inline">Baixar Material</span>
                   </Button>
                 </div>
               </DialogFooter>
