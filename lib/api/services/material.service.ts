@@ -101,6 +101,18 @@ class MaterialService {
     const response = await apiClient.get<ApiResponse<Download[]>>(endpoint)
     return response.data ?? []
   }
+
+  async getLatestUploads(limit: number = 4): Promise<Material[]> {
+    const params = new URLSearchParams()
+    params.append("page", "1")
+    params.append("limit", limit.toString())
+
+    const response = await apiClient.get<ApiResponse<{ materials: Material[]; total: number }>>(
+      `${this.BASE_PATH}?${params.toString()}`,
+    )
+
+    return response.data?.materials ?? []
+  }
 }
 
 export const materialService = new MaterialService()

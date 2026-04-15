@@ -15,14 +15,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Heart, Download as DownloadIcon, BookOpen, FileText, Loader2 } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
+import { Textarea } from "@/components/ui/textarea"
+import { Heart, Upload, BookOpen, FileText, Loader2, Download, Calendar, TrendingUp, User, HardDrive, Flag } from "lucide-react"
 import Link from "next/link"
 import { withAuth } from "@/lib/auth/protected-route"
 import { useAuth } from "@/lib/hooks/use-auth"
 import { disciplineService } from "@/lib/api/services/discipline.service"
 import { materialService } from "@/lib/api/services/material.service"
 import { requestService } from "@/lib/api/services/request.service"
-import type { Download, Request } from "@/lib/api/types"
+import type { Material, Request } from "@/lib/api/types"
 import { useToast } from "@/lib/hooks/use-toast"
 
 interface FavoriteDiscipline {
@@ -37,15 +47,18 @@ const MAX_FAVORITE_DISCIPLINES = 9
 function HomePage() {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false)
-  const [selectedDownload, setSelectedDownload] = useState<Download | null>(null)
   const [favoriteDisciplines, setFavoriteDisciplines] = useState<FavoriteDiscipline[]>([])
   const [isLoadingFavorites, setIsLoadingFavorites] = useState(true)
-  const [recentDownloads, setRecentDownloads] = useState<Download[]>([])
-  const [isLoadingDownloads, setIsLoadingDownloads] = useState(true)
+  const [recentUploads, setRecentUploads] = useState<Material[]>([])
+  const [isLoadingUploads, setIsLoadingUploads] = useState(true)
   const [myRequests, setMyRequests] = useState<Request[]>([])
   const [isLoadingRequests, setIsLoadingRequests] = useState(true)
-  const [isRedownloading, setIsRedownloading] = useState(false)
+  const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null)
+  const [materialDetailsOpen, setMaterialDetailsOpen] = useState(false)
+  const [reportDialogOpen, setReportDialogOpen] = useState(false)
+  const [materialToReport, setMaterialToReport] = useState<string | null>(null)
+  const [reportReason, setReportReason] = useState("")
+  const [isReporting, setIsReporting] = useState(false)
 
   const formatRelativeTime = (date: string) =>
     formatDistanceToNow(new Date(date), { addSuffix: true, locale: ptBR })
@@ -77,20 +90,20 @@ function HomePage() {
   useEffect(() => {
     if (!user) return
 
-    const fetchRecentDownloads = async () => {
+    const fetchRecentUploads = async () => {
       try {
-        setIsLoadingDownloads(true)
-        const downloads = await materialService.getRecentDownloads(4)
-        setRecentDownloads(downloads)
+        setIsLoadingUploads(true)
+        const uploads = await materialService.getLatestUploads(4)
+        setRecentUploads(uploads)
       } catch (err) {
-        console.error("Erro ao carregar downloads recentes:", err)
-        setRecentDownloads([])
+        console.error("Erro ao carregar uploads recentes:", err)
+        setRecentUploads([])
       } finally {
-        setIsLoadingDownloads(false)
+        setIsLoadingUploads(false)
       }
     }
 
-    fetchRecentDownloads()
+    fetchRecentUploads()
   }, [user])
 
   useEffect(() => {
@@ -131,26 +144,67 @@ function HomePage() {
     },
   }
 
-  const handleDownloadClick = (download: Download) => {
-    setSelectedDownload(download)
-    setDownloadDialogOpen(true)
+  const getTypeLabel = (type: Material["type"]): string => {
+    const typeMap: Record<string, string> = {
+      EXAM: "Provas antigas",
+      EXERCISE_SHEET: "Listas de exercícios",
+      SUMMARY: "Resumo",
+      SLIDE: "Slides",
+    }
+
+    return typeMap[type] || "Arquivo"
   }
 
-  const confirmDownload = async () => {
-    if (!selectedDownload) return
+  const openMaterialDetails = (material: Material) => {
+    setSelectedMaterial(material)
+    setMaterialDetailsOpen(true)
+  }
+
+  const handleDownload = async (material: Material) => {
+    try {
+      const url = await materialService.downloadMaterial(material.id)
+      window.open(url, "_blank")
+    } catch (error) {
+      toast.error("Erro ao fazer download do material")
+    }
+  }
+
+  const handleDownloadAnswerKey = async (material: Material) => {
+    try {
+      const url = await materialService.downloadAnswerKey(material.id)
+      window.open(url, "_blank")
+      toast.success("Download do gabarito iniciado!")
+    } catch (error) {
+      toast.error("Erro ao fazer download do gabarito")
+    }
+  }
+
+  const handleReport = (materialId: string) => {
+    setMaterialToReport(materialId)
+    setReportReason("")
+    setReportDialogOpen(true)
+  }
+
+  const confirmReport = async () => {
+    if (!reportReason.trim()) {
+      toast.error("Por favor, informe o motivo da denúncia.")
+      return
+    }
+
+    if (!materialToReport) return
 
     try {
-      setIsRedownloading(true)
-      const url = await materialService.downloadMaterial(selectedDownload.materialId)
-      window.open(url, "_blank", "noopener,noreferrer")
-      toast.success("Download iniciado com sucesso.")
+      setIsReporting(true)
+      await materialService.reportMaterial(materialToReport, reportReason)
+      toast.success("Material denunciado com sucesso. Nossa equipe irá analisar.")
+      setReportDialogOpen(false)
+      setMaterialToReport(null)
+      setReportReason("")
     } catch (err) {
-      console.error("Erro ao iniciar download novamente:", err)
-      toast.error("Não foi possível iniciar o download. Tente novamente.")
+      console.error("Erro ao reportar material:", err)
+      toast.error("Erro ao reportar material")
     } finally {
-      setIsRedownloading(false)
-      setDownloadDialogOpen(false)
-      setSelectedDownload(null)
+      setIsReporting(false)
     }
   }
 
@@ -276,42 +330,42 @@ function HomePage() {
         <Card className="flex flex-col">
           <CardHeader className="flex-shrink-0">
             <div>
-              <CardTitle>Últimos Downloads</CardTitle>
-              <CardDescription>Materiais que você baixou recentemente</CardDescription>
+              <CardTitle>Últimos Uploads</CardTitle>
+              <CardDescription>Materiais enviados recentemente na plataforma</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col min-h-0">
             <div className="flex-1 overflow-y-auto space-y-3 pr-2" style={{ maxHeight: "320px" }}>
-              {isLoadingDownloads ? (
+              {isLoadingUploads ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
-              ) : recentDownloads.length === 0 ? (
+              ) : recentUploads.length === 0 ? (
                 <div className="text-center py-12">
-                  <DownloadIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground mb-4">Nenhum download recente encontrado</p>
+                  <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground mb-4">Nenhum upload recente encontrado</p>
                   <Button asChild variant="outline" className="cursor-pointer">
                     <Link href="/home/disciplinas">Explorar materiais</Link>
                   </Button>
                 </div>
               ) : (
-                recentDownloads.map((download) => (
+                recentUploads.map((upload) => (
                   <div
-                    key={download.id}
-                    onClick={() => handleDownloadClick(download)}
+                    key={upload.id}
+                    onClick={() => openMaterialDetails(upload)}
                     className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors group cursor-pointer"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                        {download.title}
+                        {upload.title}
                       </p>
                       <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
-                        <span className="font-mono text-primary">{download.disciplineCode}</span>
+                        <span className="font-mono text-primary">{upload.disciplineCode}</span>
                         <span className="text-muted-foreground">•</span>
-                        <span>{formatRelativeTime(download.downloadedAt)}</span>
+                        <span>{formatRelativeTime(upload.uploadedAt)}</span>
                       </div>
                     </div>
-                    <DownloadIcon className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2 self-center" />
+                    <Upload className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2 self-center" />
                   </div>
                 ))
               )}
@@ -344,38 +398,154 @@ function HomePage() {
         </CardContent>
       </Card>
 
-      <AlertDialog open={downloadDialogOpen} onOpenChange={setDownloadDialogOpen}>
+      <Dialog open={materialDetailsOpen} onOpenChange={setMaterialDetailsOpen}>
+        <DialogContent className="max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto overflow-x-hidden">
+          {selectedMaterial && (
+            <>
+              <DialogHeader>
+                <div className="flex items-start justify-between mb-2">
+                  <Badge variant="outline" className="text-xs">
+                    {getTypeLabel(selectedMaterial.type)}
+                  </Badge>
+                </div>
+                <DialogTitle className="text-xl [overflow-wrap:anywhere]">{selectedMaterial.title}</DialogTitle>
+                <DialogDescription className="text-base mt-2 [overflow-wrap:anywhere]">
+                  {selectedMaterial.description}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Data de Upload</p>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm">
+                        {new Date(selectedMaterial.uploadedAt).toLocaleDateString("pt-BR", {
+                          day: "2-digit",
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Downloads</p>
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm">{selectedMaterial.downloads} downloads</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Autor</p>
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm">{selectedMaterial.authorName}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Tamanho</p>
+                    <div className="flex items-center gap-2">
+                      <HardDrive className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm">{(selectedMaterial.fileSize / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                  </div>
+
+                  {selectedMaterial.professor && (
+                    <div className="space-y-1 col-span-2">
+                      <p className="text-sm font-medium text-muted-foreground">Professor(a)</p>
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-sm font-medium [overflow-wrap:anywhere]">{selectedMaterial.professor}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedMaterial.answerKeyFileName && (
+                    <div className="space-y-1 col-span-2">
+                      <p className="text-sm font-medium text-muted-foreground">Gabarito Disponível</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <DialogFooter className="flex-row justify-between items-center">
+                {!selectedMaterial.isOwner && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="cursor-pointer hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => {
+                      setMaterialDetailsOpen(false)
+                      handleReport(selectedMaterial.id)
+                    }}
+                    title="Denunciar material"
+                  >
+                    <Flag className="h-4 w-4" />
+                  </Button>
+                )}
+                <div className="flex gap-2 flex-nowrap">
+                  {selectedMaterial.answerKeyUrl && (
+                    <Button
+                      variant="outline"
+                      className="cursor-pointer bg-transparent"
+                      onClick={() => handleDownloadAnswerKey(selectedMaterial)}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      <span className="sm:hidden">Gabarito</span>
+                      <span className="hidden sm:inline">Baixar Gabarito</span>
+                    </Button>
+                  )}
+                  <Button className="cursor-pointer" onClick={() => handleDownload(selectedMaterial)}>
+                    <Download className="h-4 w-4 mr-2" />
+                    <span className="sm:hidden">Material</span>
+                    <span className="hidden sm:inline">Baixar Material</span>
+                  </Button>
+                </div>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
         <AlertDialogContent className="max-w-[calc(100vw-2rem)]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Baixar novamente?</AlertDialogTitle>
-            <div className="space-y-4">
-              <AlertDialogDescription>
-                Você já baixou este material anteriormente. Deseja fazer o download novamente?
-              </AlertDialogDescription>
-              <div className="p-3 bg-muted rounded-lg">
-                <span className="font-medium text-foreground block">{selectedDownload?.title}</span>
-                <span className="text-sm text-muted-foreground mt-1 block">
-                  {selectedDownload
-                    ? `${selectedDownload.disciplineCode} • ${selectedDownload.fileName}`
-                    : ""}
-                </span>
-              </div>
-            </div>
+            <AlertDialogTitle>Denunciar Material</AlertDialogTitle>
+            <AlertDialogDescription>
+              Por favor, informe o motivo da denúncia. Nossa equipe irá analisar e tomar as medidas necessárias.
+            </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="py-4">
+            <Textarea
+              placeholder="Descreva o motivo da denúncia (obrigatório)..."
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              className="min-h-[100px]"
+              required
+            />
+          </div>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer hover:bg-destructive/10 hover:text-destructive">
+            <AlertDialogCancel className="cursor-pointer hover:bg-destructive/10 hover:text-destructive" disabled={isReporting}>
               Cancelar
             </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDownload}
-              className="cursor-pointer"
-              disabled={isRedownloading}
-            >
-              {isRedownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Baixar"}
+            <AlertDialogAction onClick={confirmReport} className="cursor-pointer" disabled={isReporting}>
+              {isReporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                "Confirmar Denúncia"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
     </div>
   )
 }
