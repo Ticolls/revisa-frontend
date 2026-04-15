@@ -360,7 +360,10 @@ function HomePage() {
                         {upload.title}
                       </p>
                       <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
-                        <span className="font-mono text-primary">{upload.disciplineCode}</span>
+                        <span className="font-mono text-primary sm:hidden">{upload.disciplineCode}</span>
+                        <span className="font-mono text-primary hidden sm:inline">
+                          {upload.disciplineCode} - {upload.disciplineName}
+                        </span>
                         <span className="text-muted-foreground">•</span>
                         <span>{formatRelativeTime(upload.uploadedAt)}</span>
                       </div>
@@ -416,6 +419,13 @@ function HomePage() {
 
               <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1 col-span-2">
+                    <p className="text-sm font-medium text-muted-foreground">Disciplina</p>
+                    <p className="text-sm [overflow-wrap:anywhere]">
+                      <span className="font-mono text-primary">{selectedMaterial.disciplineCode}</span> - {selectedMaterial.disciplineName}
+                    </p>
+                  </div>
+
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">Data de Upload</p>
                     <div className="flex items-center gap-2">
