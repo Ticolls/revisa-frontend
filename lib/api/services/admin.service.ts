@@ -37,10 +37,7 @@ class AdminService {
     return response.data!
   }
 
-  async updateUser(
-    id: string,
-    data: { name?: string; email?: string; password?: string; isVerified?: boolean },
-  ): Promise<User> {
+  async updateUser(id: string, data: { name?: string; email?: string }): Promise<User> {
     const response = await apiClient.put<ApiResponse<User>>(`/users/${id}`, data)
     return response.data!
   }
@@ -55,9 +52,14 @@ class AdminService {
   }
 
   // ========== DISCIPLINES ==========
-  async getDisciplines(page = 1, limit = 10): Promise<PaginatedResponse<Discipline>> {
+  async getDisciplines(page = 1, limit = 10, search?: string): Promise<PaginatedResponse<Discipline>> {
+    const params = new URLSearchParams()
+    params.append("page", page.toString())
+    params.append("limit", limit.toString())
+    if (search?.trim()) params.append("search", search.trim())
+
     const response = await apiClient.get<ApiResponse<{ disciplines: Discipline[]; total: number }>>(
-      `/disciplines?page=${page}&limit=${limit}`,
+      `/disciplines?${params.toString()}`,
     )
     
     return {

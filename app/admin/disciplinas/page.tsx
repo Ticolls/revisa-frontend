@@ -45,6 +45,7 @@ function AdminDisciplinesPage() {
   const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [disciplines, setDisciplines] = useState<Discipline[]>([])
+  const [totalDisciplines, setTotalDisciplines] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const [showDisciplineDialog, setShowDisciplineDialog] = useState(false)
   const [editingDiscipline, setEditingDiscipline] = useState<Discipline | null>(null)
@@ -54,13 +55,19 @@ function AdminDisciplinesPage() {
 
   useEffect(() => {
     setMounted(true)
-    loadDisciplines()
   }, [])
 
-  const loadDisciplines = async () => {
+  useEffect(() => {
+    if (!mounted) return
+    loadDisciplines(currentPage, searchQuery)
+  }, [mounted, currentPage, searchQuery])
+
+  const loadDisciplines = async (page = 1, search = "") => {
     try {
-      const response = await adminService.getDisciplines(1, 100)
+      setLoading(true)
+      const response = await adminService.getDisciplines(page, ITEMS_PER_PAGE, search)
       setDisciplines(response.data)
+      setTotalDisciplines(response.pagination.total)
     } catch (error) {
       toast.error("Erro ao carregar disciplinas")
     } finally {
@@ -68,26 +75,7 @@ function AdminDisciplinesPage() {
     }
   }
 
-  const filteredDisciplines = useMemo(() => {
-    if (!disciplines) return []
-    if (!searchQuery.trim()) return disciplines
-
-    const query = searchQuery.toLowerCase()
-    return disciplines.filter(
-      (d) =>
-        d.code.toLowerCase().includes(query) ||
-        d.name.toLowerCase().includes(query) ||
-        d.semester.toString().includes(query),
-    )
-  }, [disciplines, searchQuery])
-
-  const paginatedDisciplines = useMemo(() => {
-    if (!filteredDisciplines) return []
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
-    return filteredDisciplines.slice(startIndex, startIndex + ITEMS_PER_PAGE)
-  }, [filteredDisciplines, currentPage])
-
-  const totalPages = Math.ceil((filteredDisciplines?.length || 0) / ITEMS_PER_PAGE)
+  const totalPages = Math.ceil(totalDisciplines / ITEMS_PER_PAGE)
 
   const paginationItems = useMemo(() => {
     if (totalPages <= 1) return [] as Array<number | string>
@@ -122,7 +110,7 @@ function AdminDisciplinesPage() {
         await adminService.createDiscipline(disciplineForm)
         toast.success("Disciplina criada com sucesso")
       }
-      loadDisciplines()
+      loadDisciplines(currentPage, searchQuery)
       setShowDisciplineDialog(false)
       setEditingDiscipline(null)
       setDisciplineForm({ code: "", name: "", semester: 1 })
@@ -137,7 +125,7 @@ function AdminDisciplinesPage() {
     try {
       await adminService.deleteDiscipline(disciplineToDelete.id)
       toast.success("Disciplina excluída com sucesso")
-      loadDisciplines()
+      loadDisciplines(currentPage, searchQuery)
     } catch (error) {
       toast.error("Erro ao excluir disciplina")
     } finally {
@@ -165,7 +153,7 @@ function AdminDisciplinesPage() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Buscar por código, nome ou semestre..."
+          placeholder="Buscar por código ou nome..."
           value={searchQuery}
           onChange={(e) => {
             setSearchQuery(e.target.value)
@@ -189,8 +177,8 @@ function AdminDisciplinesPage() {
         <CardHeader>
           <CardTitle>Disciplinas</CardTitle>
           <CardDescription>
-            {filteredDisciplines.length} disciplina{filteredDisciplines.length !== 1 ? "s" : ""} encontrada
-            {filteredDisciplines.length !== 1 ? "s" : ""}
+            {totalDisciplines} disciplina{totalDisciplines !== 1 ? "s" : ""} encontrada
+            {totalDisciplines !== 1 ? "s" : ""}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -206,7 +194,7 @@ function AdminDisciplinesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedDisciplines.map((discipline) => (
+                {disciplines.map((discipline) => (
                   <TableRow key={discipline.id}>
                     <TableCell className="font-medium">{discipline.code}</TableCell>
                     <TableCell>{discipline.name}</TableCell>
