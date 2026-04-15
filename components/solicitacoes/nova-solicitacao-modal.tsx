@@ -35,6 +35,10 @@ const MATERIAL_TYPE_OPTIONS: { value: MaterialType; label: string }[] = [
   { value: MaterialType.SLIDE, label: "Slides" },
 ]
 
+const TITLE_MAX_LENGTH = 100
+const DESCRIPTION_MAX_LENGTH = 300
+const PROFESSOR_MAX_LENGTH = 50
+
 export function NovaSolicitacaoModal({ onSuccess }: NovaSolicitacaoModalProps) {
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -69,7 +73,7 @@ export function NovaSolicitacaoModal({ onSuccess }: NovaSolicitacaoModalProps) {
     const fetchDisciplines = async () => {
       try {
         setIsLoadingDisciplines(true)
-        const response = await disciplineService.getDisciplines({ limit: 100 })
+        const response = await disciplineService.getDisciplines({ limit: 1000 })
         setDisciplines(response.disciplines)
       } catch (error) {
         console.error("Erro ao carregar disciplinas:", error)
@@ -231,34 +235,55 @@ export function NovaSolicitacaoModal({ onSuccess }: NovaSolicitacaoModalProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="modal-title">Título do Material</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="modal-title">Título do Material</Label>
+              <span className="text-xs text-muted-foreground">
+                {title.length}/{TITLE_MAX_LENGTH}
+              </span>
+            </div>
             <Input
               id="modal-title"
               placeholder="Ex: Lista de Exercícios 3"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              maxLength={TITLE_MAX_LENGTH}
             />
+            <p className="text-xs text-muted-foreground">Máximo de {TITLE_MAX_LENGTH} caracteres.</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="modal-professor">Professor(a) (opcional)</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="modal-professor">Professor(a) (opcional)</Label>
+              <span className="text-xs text-muted-foreground">
+                {professor.length}/{PROFESSOR_MAX_LENGTH}
+              </span>
+            </div>
             <Input
               id="modal-professor"
               placeholder="Ex: Professor(a) Maria Silva"
               value={professor}
               onChange={(e) => setProfessor(e.target.value)}
+              maxLength={PROFESSOR_MAX_LENGTH}
             />
+            <p className="text-xs text-muted-foreground">Máximo de {PROFESSOR_MAX_LENGTH} caracteres.</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="modal-description">Descrição (opcional)</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="modal-description">Descrição (opcional)</Label>
+              <span className="text-xs text-muted-foreground">
+                {description.length}/{DESCRIPTION_MAX_LENGTH}
+              </span>
+            </div>
             <Textarea
               id="modal-description"
               placeholder="Adicione mais detalhes sobre o material que você procura..."
               rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              maxLength={DESCRIPTION_MAX_LENGTH}
             />
+            <p className="text-xs text-muted-foreground">Máximo de {DESCRIPTION_MAX_LENGTH} caracteres.</p>
           </div>
 
           <div className="flex gap-3 pt-4">
