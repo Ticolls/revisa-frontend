@@ -74,14 +74,14 @@ class AdminService {
     }
   }
 
-  async createDiscipline(data: { code: string; name: string; semester: number }): Promise<Discipline> {
+  async createDiscipline(data: { code: string; name: string }): Promise<Discipline> {
     const response = await apiClient.post<ApiResponse<Discipline>>("/disciplines", data)
     return response.data!
   }
 
   async updateDiscipline(
     id: string,
-    data: { code?: string; name?: string; description?: string; semester?: number }
+    data: { code?: string; name?: string; description?: string }
   ): Promise<Discipline> {
     const response = await apiClient.put<ApiResponse<Discipline>>(`/disciplines/${id}`, data)
     return response.data!
@@ -116,6 +116,7 @@ class AdminService {
       description?: string
       type?: string
       professor?: string
+      disciplineId?: string
     },
   ): Promise<Material> {
     const response = await apiClient.put<ApiResponse<Material>>(`/materials/${id}`, data)

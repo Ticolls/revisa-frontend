@@ -24,8 +24,10 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Trash2, Edit, Search, X } from "lucide-react"
+import { Trash2, Edit, Search, X, Download, Calendar, User, FileText } from "lucide-react"
 import {
   Pagination,
   PaginationContent,
@@ -36,12 +38,22 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { toast } from "react-toastify"
-import { Material } from "@/lib/api/types"
+import { Discipline, Material, MaterialType } from "@/lib/api/types"
 import { adminService } from "@/lib/api/services/admin.service"
 import { withAdminAuth } from "@/lib/auth/protected-route"
 
 const ITEMS_PER_PAGE = 10
 const SEARCH_DEBOUNCE_MS = 500
+const TITLE_MAX_LENGTH = 100
+const DESCRIPTION_MAX_LENGTH = 300
+const PROFESSOR_MAX_LENGTH = 50
+
+const MATERIAL_TYPE_OPTIONS: { value: MaterialType; label: string }[] = [
+  { value: MaterialType.EXAM, label: "Provas antigas" },
+  { value: MaterialType.EXERCISE_SHEET, label: "Listas de exercícios" },
+  { value: MaterialType.SUMMARY, label: "Resumo" },
+  { value: MaterialType.SLIDE, label: "Slides" },
+]
 
 function AdminMaterialsPage() {
   const [mounted, setMounted] = useState(false)
@@ -51,7 +63,15 @@ function AdminMaterialsPage() {
   const [materialToDelete, setMaterialToDelete] = useState<Material | null>(null)
   const [showMaterialDialog, setShowMaterialDialog] = useState(false)
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null)
-  const [materialForm, setMaterialForm] = useState({ title: "", description: "" })
+  const [materialForm, setMaterialForm] = useState({
+    title: "",
+    description: "",
+    professor: "",
+    type: MaterialType.SLIDE as MaterialType,
+    disciplineId: "",
+  })
+  const [disciplines, setDisciplines] = useState<Discipline[]>([])
+  const [isLoadingDisciplines, setIsLoadingDisciplines] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
 
@@ -66,6 +86,7 @@ function AdminMaterialsPage() {
   useEffect(() => {
     setMounted(true)
     loadMaterials()
+    loadDisciplines()
   }, [])
 
   const loadMaterials = async () => {
@@ -76,6 +97,18 @@ function AdminMaterialsPage() {
       toast.error("Erro ao carregar materiais")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadDisciplines = async () => {
+    try {
+      setIsLoadingDisciplines(true)
+      const response = await adminService.getDisciplines(1, 1000)
+      setDisciplines(response.data)
+    } catch (error) {
+      toast.error("Erro ao carregar disciplinas")
+    } finally {
+      setIsLoadingDisciplines(false)
     }
   }
 
@@ -142,15 +175,43 @@ function AdminMaterialsPage() {
     if (!editingMaterial) return
 
     try {
-      await adminService.updateMaterial(editingMaterial.id, materialForm)
+      await adminService.updateMaterial(editingMaterial.id, {
+        title: materialForm.title,
+        description: materialForm.description,
+        professor: materialForm.professor || undefined,
+        type: materialForm.type,
+        disciplineId: materialForm.disciplineId,
+      })
       toast.success("Material atualizado com sucesso")
       loadMaterials()
       setShowMaterialDialog(false)
       setEditingMaterial(null)
-      setMaterialForm({ title: "", description: "" })
+      setMaterialForm({
+        title: "",
+        description: "",
+        professor: "",
+        type: MaterialType.SLIDE,
+        disciplineId: "",
+      })
     } catch (error) {
       toast.error("Erro ao atualizar material")
     }
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+  }
+
+  const downloadMaterialFile = () => {
+    if (!editingMaterial?.fileUrl) return
+    window.open(editingMaterial.fileUrl, "_blank")
+  }
+
+  const downloadAnswerKeyFile = () => {
+    if (!editingMaterial?.answerKeyUrl) return
+    window.open(editingMaterial.answerKeyUrl, "_blank")
   }
 
   if (!mounted || loading) {
@@ -179,7 +240,7 @@ function AdminMaterialsPage() {
           <Button
             size="icon"
             variant="ghost"
-            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 cursor-pointer"
             onClick={() => setSearchQuery("")}
           >
             <X className="h-4 w-4" />
@@ -196,42 +257,55 @@ function AdminMaterialsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
+          <div className="overflow-x-hidden">
+            <Table className="table-fixed w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Disciplina</TableHead>
-                  <TableHead>Autor</TableHead>
-                  <TableHead>Downloads</TableHead>
+                  <TableHead className="w-[35%]">Título</TableHead>
+                  <TableHead className="w-[12%]">Tipo</TableHead>
+                  <TableHead className="w-[12%]">Disciplina</TableHead>
+                  <TableHead className="w-[20%]">Autor</TableHead>
+                  <TableHead className="w-[8%]">Downloads</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedMaterials.map((material) => (
                   <TableRow key={material.id}>
-                    <TableCell className="font-medium">{material.title}</TableCell>
+                    <TableCell className="font-medium max-w-0">
+                      <div className="truncate" title={material.title}>{material.title}</div>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline">{material.type}</Badge>
                     </TableCell>
-                    <TableCell>{material.disciplineCode}</TableCell>
-                    <TableCell>{material.authorName}</TableCell>
+                    <TableCell className="max-w-0">
+                      <div className="truncate" title={material.disciplineCode}>{material.disciplineCode}</div>
+                    </TableCell>
+                    <TableCell className="max-w-0">
+                      <div className="truncate" title={material.authorName}>{material.authorName}</div>
+                    </TableCell>
                     <TableCell>{material.downloads}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="cursor-pointer"
                           onClick={() => {
                             setEditingMaterial(material)
-                            setMaterialForm({ title: material.title, description: material.description })
+                            setMaterialForm({
+                              title: material.title,
+                              description: material.description,
+                              professor: material.professor || "",
+                              type: material.type,
+                              disciplineId: material.disciplineId,
+                            })
                             setShowMaterialDialog(true)
                           }}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setMaterialToDelete(material)}>
+                        <Button variant="ghost" size="icon" className="cursor-pointer" onClick={() => setMaterialToDelete(material)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -296,37 +370,181 @@ function AdminMaterialsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={showMaterialDialog} onOpenChange={setShowMaterialDialog}>
-        <DialogContent className="max-w-[calc(100vw-2rem)]">
+      <Dialog
+        open={showMaterialDialog}
+        onOpenChange={(open) => {
+          setShowMaterialDialog(open)
+          if (!open) {
+            setEditingMaterial(null)
+          }
+        }}
+      >
+        <DialogContent className="max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>Editar Material</DialogTitle>
-            <DialogDescription>Atualize as informações do material</DialogDescription>
+            <DialogDescription>Atualize os campos abaixo. A troca de arquivos não é permitida no admin.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="title">Título</Label>
-              <Input
-                id="title"
-                value={materialForm.title}
-                onChange={(e) => setMaterialForm({ ...materialForm, title: e.target.value })}
-                placeholder="Título do material"
-              />
+
+          {editingMaterial && (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="rounded-md border p-3 space-y-2">
+                  <p className="text-xs text-muted-foreground">Arquivo principal</p>
+                  <div className="flex items-center gap-2 text-sm">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span className="truncate" title={editingMaterial.fileName}>{editingMaterial.fileName}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{formatFileSize(editingMaterial.fileSize)}</p>
+                </div>
+                <div className="rounded-md border p-3 space-y-2">
+                  <p className="text-xs text-muted-foreground">Informações</p>
+                  <div className="flex items-center gap-2 text-sm">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="truncate" title={editingMaterial.authorName}>{editingMaterial.authorName}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    <span>{new Date(editingMaterial.uploadedAt).toLocaleDateString("pt-BR")}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-material-discipline">Disciplina</Label>
+                <Select
+                  value={materialForm.disciplineId}
+                  onValueChange={(value) => setMaterialForm({ ...materialForm, disciplineId: value })}
+                >
+                  <SelectTrigger id="edit-material-discipline" className="cursor-pointer">
+                    <SelectValue placeholder={isLoadingDisciplines ? "Carregando disciplinas..." : "Selecione a disciplina"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {disciplines.map((discipline) => (
+                      <SelectItem key={discipline.id} value={discipline.id} className="cursor-pointer">
+                        {discipline.code} - {discipline.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-material-type">Tipo de material</Label>
+                <Select
+                  value={materialForm.type}
+                  onValueChange={(value) => setMaterialForm({ ...materialForm, type: value as MaterialType })}
+                >
+                  <SelectTrigger id="edit-material-type" className="cursor-pointer">
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MATERIAL_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value} className="cursor-pointer">
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="edit-material-title">Título</Label>
+                  <span className="text-xs text-muted-foreground">{materialForm.title.length}/{TITLE_MAX_LENGTH}</span>
+                </div>
+                <Textarea
+                  id="edit-material-title"
+                  value={materialForm.title}
+                  onChange={(e) => setMaterialForm({ ...materialForm, title: e.target.value.slice(0, TITLE_MAX_LENGTH) })}
+                  rows={2}
+                  className="resize-none [overflow-wrap:anywhere]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="edit-material-description">Descrição</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {materialForm.description.length}/{DESCRIPTION_MAX_LENGTH}
+                  </span>
+                </div>
+                <Textarea
+                  id="edit-material-description"
+                  value={materialForm.description}
+                  onChange={(e) =>
+                    setMaterialForm({ ...materialForm, description: e.target.value.slice(0, DESCRIPTION_MAX_LENGTH) })
+                  }
+                  rows={3}
+                  className="[overflow-wrap:anywhere]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="edit-material-professor">Professor(a) (opcional)</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {materialForm.professor.length}/{PROFESSOR_MAX_LENGTH}
+                  </span>
+                </div>
+                <Textarea
+                  id="edit-material-professor"
+                  value={materialForm.professor}
+                  onChange={(e) => setMaterialForm({ ...materialForm, professor: e.target.value.slice(0, PROFESSOR_MAX_LENGTH) })}
+                  rows={2}
+                  className="resize-none [overflow-wrap:anywhere]"
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="description">Descrição</Label>
-              <Input
-                id="description"
-                value={materialForm.description}
-                onChange={(e) => setMaterialForm({ ...materialForm, description: e.target.value })}
-                placeholder="Descrição do material"
-              />
-            </div>
-          </div>
+          )}
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowMaterialDialog(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveMaterial}>Salvar</Button>
+            <div className="w-full space-y-3 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-stretch">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={downloadMaterialFile}
+                  className="h-10 w-full justify-center cursor-pointer bg-transparent hover:bg-accent hover:text-accent-foreground"
+                  disabled={!editingMaterial?.fileUrl}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Baixar material
+                </Button>
+
+                {editingMaterial?.answerKeyUrl ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 w-full justify-center cursor-pointer bg-transparent hover:bg-accent hover:text-accent-foreground"
+                    onClick={downloadAnswerKeyFile}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Baixar gabarito
+                  </Button>
+                ) : (
+                  <Button type="button" variant="outline" disabled className="h-10 w-full justify-center cursor-not-allowed">
+                    <Download className="mr-2 h-4 w-4" />
+                    Sem gabarito
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:pt-1">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowMaterialDialog(false)}
+                  className="h-10 min-w-[140px] cursor-pointer bg-transparent hover:bg-accent hover:text-accent-foreground"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleSaveMaterial}
+                  className="h-10 min-w-[140px] cursor-pointer text-primary-foreground hover:text-primary-foreground"
+                >
+                  Salvar alterações
+                </Button>
+              </div>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

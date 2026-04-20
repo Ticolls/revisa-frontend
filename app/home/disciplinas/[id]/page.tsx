@@ -384,7 +384,6 @@ function DisciplinePage() {
                   {discipline.code}
                 </Badge>
                 <CardTitle className="text-2xl">{discipline.name}</CardTitle>
-                <CardDescription>Semestre {discipline.semester}</CardDescription>
               </div>
               <div className="flex items-center gap-2">
                 <Button onClick={handleAddMaterial} className="cursor-pointer" aria-label="Adicionar material">
@@ -403,11 +402,7 @@ function DisciplinePage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Semestre</p>
-                <p className="text-lg font-semibold">{discipline.semester}º</p>
-              </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Total de Materiais</p>
                 <p className="text-lg font-semibold">{totalMaterials}</p>
@@ -446,12 +441,12 @@ function DisciplinePage() {
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3">
           <Select value={materialTypeFilter} onValueChange={setMaterialTypeFilter}>
-            <SelectTrigger className="sm:w-[200px]">
+            <SelectTrigger className="sm:w-[200px] cursor-pointer">
               <SelectValue placeholder="Tipo de material" />
             </SelectTrigger>
             <SelectContent>
               {materialTypes.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
+                <SelectItem key={type.value} value={type.value} className="cursor-pointer">
                   {type.label}
                 </SelectItem>
               ))}
@@ -459,12 +454,12 @@ function DisciplinePage() {
           </Select>
 
           <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="sm:w-[180px]">
+            <SelectTrigger className="sm:w-[180px] cursor-pointer">
               <SelectValue placeholder="Ordenar por" />
             </SelectTrigger>
             <SelectContent>
               {sortOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem key={option.value} value={option.value} className="cursor-pointer">
                   {option.label}
                 </SelectItem>
               ))}

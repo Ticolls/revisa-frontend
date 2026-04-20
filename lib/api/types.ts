@@ -100,7 +100,6 @@ export interface Discipline {
   code: string
   name: string
   description?: string
-  semester: number
   totalMaterials?: number
   isFavorite: boolean
   createdAt: string
@@ -114,7 +113,6 @@ export interface Discipline {
 
 export interface DisciplineFilters {
   search?: string
-  semester?: number
   onlyFavorites?: boolean
   sortBy?: "name" | "code" | "materials"
   page?: number

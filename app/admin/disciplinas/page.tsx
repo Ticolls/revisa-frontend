@@ -50,7 +50,7 @@ function AdminDisciplinesPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [showDisciplineDialog, setShowDisciplineDialog] = useState(false)
   const [editingDiscipline, setEditingDiscipline] = useState<Discipline | null>(null)
-  const [disciplineForm, setDisciplineForm] = useState({ code: "", name: "", semester: 1 })
+  const [disciplineForm, setDisciplineForm] = useState({ code: "", name: "" })
   const [disciplineToDelete, setDisciplineToDelete] = useState<Discipline | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
@@ -123,7 +123,7 @@ function AdminDisciplinesPage() {
       loadDisciplines(currentPage, debouncedSearchQuery)
       setShowDisciplineDialog(false)
       setEditingDiscipline(null)
-      setDisciplineForm({ code: "", name: "", semester: 1 })
+      setDisciplineForm({ code: "", name: "" })
     } catch (error) {
       toast.error("Erro ao salvar disciplina")
     }
@@ -143,7 +143,7 @@ function AdminDisciplinesPage() {
     }
   }
 
-  if (!mounted || loading) {
+  if (!mounted) {
     return null
   }
 
@@ -198,18 +198,23 @@ function AdminDisciplinesPage() {
                 <TableRow>
                   <TableHead>Código</TableHead>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Semestre</TableHead>
                   <TableHead>Materiais</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {loading && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                      Carregando disciplinas...
+                    </TableCell>
+                  </TableRow>
+                )}
                 {disciplines.map((discipline) => (
                   <TableRow key={discipline.id}>
                     <TableCell className="font-medium">{discipline.code}</TableCell>
                     <TableCell>{discipline.name}</TableCell>
-                    <TableCell>{discipline.semester}</TableCell>
-                    <TableCell>{discipline.totalMaterials}</TableCell>
+                    <TableCell>{discipline.totalMaterials ?? discipline._count?.materials ?? 0}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button
@@ -220,7 +225,6 @@ function AdminDisciplinesPage() {
                             setDisciplineForm({
                               code: discipline.code,
                               name: discipline.name,
-                              semester: discipline.semester,
                             })
                             setShowDisciplineDialog(true)
                           }}
@@ -244,7 +248,10 @@ function AdminDisciplinesPage() {
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setCurrentPage((p) => Math.max(1, p - 1))
+                      }}
                       className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                     />
                   </PaginationItem>
@@ -252,7 +259,10 @@ function AdminDisciplinesPage() {
                     <PaginationItem key={item}>
                       {typeof item === "number" ? (
                         <PaginationLink
-                          onClick={() => setCurrentPage(item)}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            setCurrentPage(item)
+                          }}
                           isActive={currentPage === item}
                           className="cursor-pointer"
                         >
@@ -265,7 +275,10 @@ function AdminDisciplinesPage() {
                   ))}
                   <PaginationItem>
                     <PaginationNext
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }}
                       className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
                     />
                   </PaginationItem>
@@ -301,18 +314,6 @@ function AdminDisciplinesPage() {
                 value={disciplineForm.name}
                 onChange={(e) => setDisciplineForm({ ...disciplineForm, name: e.target.value })}
                 placeholder="Ex: Cálculo I"
-              />
-            </div>
-            <div>
-              <Label htmlFor="semester">Semestre</Label>
-              <Input
-                id="semester"
-                type="number"
-                min="1"
-                max="10"
-                value={disciplineForm.semester}
-                onChange={(e) => setDisciplineForm({ ...disciplineForm, semester: parseInt(e.target.value) || 1 })}
-                placeholder="Ex: 1"
               />
             </div>
           </div>

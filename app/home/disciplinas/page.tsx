@@ -17,7 +17,6 @@ interface DisciplineWithFavorite {
   code: string
   name: string
   description?: string
-  semester: number
   isFavorite: boolean
   _count?: {
     materials: number
@@ -30,7 +29,6 @@ const SEARCH_DEBOUNCE_MS = 500
 function DisciplinesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
-  const [semesterFilter, setSemesterFilter] = useState<string>("all")
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const [sortBy, setSortBy] = useState<string>("name")
   const [isLoading, setIsLoading] = useState(true)
@@ -50,7 +48,7 @@ function DisciplinesPage() {
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [debouncedSearchTerm, semesterFilter, showFavoritesOnly, sortBy])
+  }, [debouncedSearchTerm, showFavoritesOnly, sortBy])
 
   // Buscar disciplinas do backend
   useEffect(() => {
@@ -63,7 +61,6 @@ function DisciplinesPage() {
           page: currentPage,
           limit: ITEMS_PER_PAGE,
           search: debouncedSearchTerm || undefined,
-          semester: semesterFilter !== "all" ? Number.parseInt(semesterFilter) : undefined,
           onlyFavorites: showFavoritesOnly || undefined,
           sortBy: sortBy as "name" | "code" | "materials",
         }
@@ -76,7 +73,6 @@ function DisciplinesPage() {
           code: disc.code,
           name: disc.name,
           description: disc.description,
-          semester: disc.semester,
           isFavorite: disc.isFavorite || false,
           _count: disc._count
         }))
@@ -93,7 +89,7 @@ function DisciplinesPage() {
     }
 
     fetchDisciplines()
-  }, [currentPage, debouncedSearchTerm, semesterFilter, showFavoritesOnly, sortBy])
+  }, [currentPage, debouncedSearchTerm, showFavoritesOnly, sortBy])
 
   const filteredDisciplines = disciplines
 
@@ -167,10 +163,9 @@ function DisciplinesPage() {
     }
   }
 
-  const activeFiltersCount = [semesterFilter !== "all", showFavoritesOnly, sortBy !== "name"].filter(Boolean).length
+  const activeFiltersCount = [showFavoritesOnly, sortBy !== "name"].filter(Boolean).length
 
   const clearFilters = () => {
-    setSemesterFilter("all")
     setShowFavoritesOnly(false)
     setSortBy("name")
     setCurrentPage(1)
@@ -236,37 +231,21 @@ function DisciplinesPage() {
 
         {/* Filtros */}
         <div className="flex flex-col sm:flex-row gap-3">
-          <Select value={semesterFilter} onValueChange={setSemesterFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Semestre" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os semestres</SelectItem>
-              <SelectItem value="0">Optativas</SelectItem>
-              <SelectItem value="1">1º Semestre</SelectItem>
-              <SelectItem value="2">2º Semestre</SelectItem>
-              <SelectItem value="3">3º Semestre</SelectItem>
-              <SelectItem value="4">4º Semestre</SelectItem>
-              <SelectItem value="5">5º Semestre</SelectItem>
-              <SelectItem value="6">6º Semestre</SelectItem>
-            </SelectContent>
-          </Select>
-
           <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px] cursor-pointer">
               <SelectValue placeholder="Ordenar por" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="name">Nome (A-Z)</SelectItem>
-              <SelectItem value="code">Código</SelectItem>
-              <SelectItem value="materials">Mais materiais</SelectItem>
+              <SelectItem value="name" className="cursor-pointer">Nome (A-Z)</SelectItem>
+              <SelectItem value="code" className="cursor-pointer">Código</SelectItem>
+              <SelectItem value="materials" className="cursor-pointer">Mais materiais</SelectItem>
             </SelectContent>
           </Select>
 
           <Button
             variant={showFavoritesOnly ? "default" : "outline"}
             onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-            className="cursor-pointer"
+            className={`cursor-pointer ${showFavoritesOnly ? "text-primary-foreground hover:text-primary-foreground" : "text-foreground hover:text-foreground"}`}
           >
             <Heart className={`h-4 w-4 mr-2 ${showFavoritesOnly ? "fill-current" : ""}`} />
             Favoritos
@@ -285,12 +264,6 @@ function DisciplinesPage() {
         {/* Badges de filtros ativos */}
         {activeFiltersCount > 0 && (
           <div className="flex flex-wrap gap-2">
-            {semesterFilter !== "all" && (
-              <Badge variant="secondary" className="cursor-pointer" onClick={() => setSemesterFilter("all")}>
-                {semesterFilter === "0" ? "Optativas" : `${semesterFilter} Semestre`}
-                <X className="h-3 w-3 ml-1" />
-              </Badge>
-            )}
             {showFavoritesOnly && (
               <Badge variant="secondary" className="cursor-pointer" onClick={() => setShowFavoritesOnly(false)}>
                 Apenas favoritos
@@ -360,7 +333,6 @@ function DisciplinesPage() {
                   <CardTitle className="text-base group-hover:text-primary transition-colors line-clamp-2">
                     {discipline.name}
                   </CardTitle>
-                  <CardDescription>{discipline.semester} Semestre</CardDescription>
                 </CardHeader>
                 <CardContent className="mt-auto">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
