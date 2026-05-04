@@ -108,7 +108,6 @@ function RequestsPage() {
     params.set("disciplineCode", request.disciplineCode)
     params.set("disciplineName", request.disciplineName)
     params.set("title", request.title)
-    params.set("requestUser", request.authorName)
 
     if (request.type) {
       params.set("materialType", request.type)
@@ -378,7 +377,6 @@ function RequestsPage() {
                       <p className="text-xs text-muted-foreground mb-2">{request.description}</p>
                     )}
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>Solicitado por {request.authorName}</span>
                       <span className="hidden sm:inline">•</span>
                       <span className="hidden sm:inline">{formatDate(request.createdAt)}</span>
                       {request.professor && (

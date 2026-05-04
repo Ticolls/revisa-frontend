@@ -75,12 +75,7 @@ function AdminReportsPage() {
 
     if (debouncedSearchQuery.trim()) {
       const query = debouncedSearchQuery.toLowerCase()
-      filtered = filtered.filter(
-        (r) =>
-          r.materialTitle.toLowerCase().includes(query) ||
-          r.materialAuthorName.toLowerCase().includes(query) ||
-          r.reporterName.toLowerCase().includes(query),
-      )
+      filtered = filtered.filter((r) => r.materialTitle.toLowerCase().includes(query))
     }
 
     return filtered
@@ -174,7 +169,7 @@ function AdminReportsPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por material, autor ou denunciante..."
+            placeholder="Buscar por material..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value)
@@ -226,8 +221,6 @@ function AdminReportsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Material</TableHead>
-                  <TableHead>Autor do Material</TableHead>
-                  <TableHead>Denunciante</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Data</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -237,8 +230,6 @@ function AdminReportsPage() {
                 {paginatedReports.map((report) => (
                   <TableRow key={report.id}>
                     <TableCell className="font-medium">{report.materialTitle}</TableCell>
-                    <TableCell>{report.materialAuthorName}</TableCell>
-                    <TableCell>{report.reporterName}</TableCell>
                     <TableCell>
                       <Badge
                         variant={
@@ -319,14 +310,6 @@ function AdminReportsPage() {
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Material</Label>
                   <p className="text-sm font-medium">{selectedReport.materialTitle}</p>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Autor do Material</Label>
-                  <p className="text-sm font-medium">{selectedReport.materialAuthorName}</p>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Denunciante</Label>
-                  <p className="text-sm font-medium">{selectedReport.reporterName}</p>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Data</Label>

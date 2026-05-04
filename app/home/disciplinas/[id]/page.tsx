@@ -749,14 +749,6 @@ function DisciplinePage() {
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Autor</p>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm">{selectedMaterial.authorName}</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">Tamanho</p>
                     <div className="flex items-center gap-2">
                       <HardDrive className="h-4 w-4 text-muted-foreground" />
@@ -783,20 +775,18 @@ function DisciplinePage() {
               </div>
 
               <DialogFooter className="flex-row justify-between items-center">
-                {!selectedMaterial.isOwner && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="cursor-pointer hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => {
-                      setMaterialDetailsOpen(false)
-                      handleReport(selectedMaterial.id)
-                    }}
-                    title="Denunciar material"
-                  >
-                    <Flag className="h-4 w-4" />
-                  </Button>
-                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="cursor-pointer hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => {
+                    setMaterialDetailsOpen(false)
+                    handleReport(selectedMaterial.id)
+                  }}
+                  title="Denunciar material"
+                >
+                  <Flag className="h-4 w-4" />
+                </Button>
                 <div className="flex gap-2 flex-nowrap">
                   {selectedMaterial.answerKeyUrl && (
                     <Button

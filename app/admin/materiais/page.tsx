@@ -27,7 +27,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Trash2, Edit, Search, X, Download, Calendar, User, FileText } from "lucide-react"
+import { Trash2, Edit, Search, X, Download, Calendar, FileText } from "lucide-react"
 import {
   Pagination,
   PaginationContent,
@@ -120,8 +120,7 @@ function AdminMaterialsPage() {
     return materials.filter(
       (m) =>
         m.title.toLowerCase().includes(query) ||
-        m.disciplineCode.toLowerCase().includes(query) ||
-        m.authorName.toLowerCase().includes(query),
+        m.disciplineCode.toLowerCase().includes(query),
     )
   }, [materials, debouncedSearchQuery])
 
@@ -228,7 +227,7 @@ function AdminMaterialsPage() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Buscar por título, disciplina ou autor..."
+          placeholder="Buscar por título ou disciplina..."
           value={searchQuery}
           onChange={(e) => {
             setSearchQuery(e.target.value)
@@ -264,7 +263,6 @@ function AdminMaterialsPage() {
                   <TableHead className="w-[35%]">Título</TableHead>
                   <TableHead className="w-[12%]">Tipo</TableHead>
                   <TableHead className="w-[12%]">Disciplina</TableHead>
-                  <TableHead className="w-[20%]">Autor</TableHead>
                   <TableHead className="w-[8%]">Downloads</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -280,9 +278,6 @@ function AdminMaterialsPage() {
                     </TableCell>
                     <TableCell className="max-w-0">
                       <div className="truncate" title={material.disciplineCode}>{material.disciplineCode}</div>
-                    </TableCell>
-                    <TableCell className="max-w-0">
-                      <div className="truncate" title={material.authorName}>{material.authorName}</div>
                     </TableCell>
                     <TableCell>{material.downloads}</TableCell>
                     <TableCell className="text-right">
@@ -398,10 +393,6 @@ function AdminMaterialsPage() {
                 </div>
                 <div className="rounded-md border p-3 space-y-2">
                   <p className="text-xs text-muted-foreground">Informações</p>
-                  <div className="flex items-center gap-2 text-sm">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="truncate" title={editingMaterial.authorName}>{editingMaterial.authorName}</span>
-                  </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4" />
                     <span>{new Date(editingMaterial.uploadedAt).toLocaleDateString("pt-BR")}</span>

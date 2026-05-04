@@ -147,8 +147,6 @@ export interface Material {
   disciplineId: string
   disciplineName: string
   disciplineCode: string
-  authorId: string
-  authorName: string
   professor?: string
   fileUrl: string
   fileName: string
@@ -157,7 +155,6 @@ export interface Material {
   answerKeyFileName?: string
   downloads: number
   uploadedAt: string
-  isOwner: boolean
 }
 
 export interface MaterialFilters {
@@ -198,10 +195,6 @@ export interface Report {
   id: string
   materialId: string
   materialTitle: string
-  materialAuthorId: string
-  materialAuthorName: string
-  reporterId: string
-  reporterName: string
   reason: string
   status: "pending" | "resolved" | "rejected"
   createdAt: string
@@ -236,15 +229,11 @@ export interface Request {
   disciplineId: string
   disciplineCode: string
   disciplineName: string
-  authorId: string
-  authorName: string
   professor?: string
   status: "pending" | "fulfilled" | "rejected"
   createdAt: string
   updatedAt: string
   fulfilledBy?: {
-    userId: string
-    userName: string
     materialId: string
     materialTitle: string
   }

@@ -84,8 +84,7 @@ function AdminRequestsPage() {
     return requests.filter(
       (r) =>
         r.title.toLowerCase().includes(query) ||
-        r.disciplineCode.toLowerCase().includes(query) ||
-        r.authorName.toLowerCase().includes(query),
+        r.disciplineCode.toLowerCase().includes(query),
     )
   }, [requests, debouncedSearchQuery])
 
@@ -169,7 +168,7 @@ function AdminRequestsPage() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Buscar por título, disciplina ou autor..."
+          placeholder="Buscar por título ou disciplina..."
           value={searchQuery}
           onChange={(e) => {
             setSearchQuery(e.target.value)
@@ -204,7 +203,6 @@ function AdminRequestsPage() {
                 <TableRow>
                   <TableHead>Título</TableHead>
                   <TableHead>Disciplina</TableHead>
-                  <TableHead>Autor</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Data</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -215,7 +213,6 @@ function AdminRequestsPage() {
                   <TableRow key={request.id}>
                     <TableCell className="font-medium">{request.title}</TableCell>
                     <TableCell>{request.disciplineCode}</TableCell>
-                    <TableCell>{request.authorName}</TableCell>
                     <TableCell>
                       <Badge
                         variant={

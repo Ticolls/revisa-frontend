@@ -108,7 +108,6 @@ function UploadsPage() {
 
   const [attendingRequest, setAttendingRequest] = useState<{
     id: string
-    user: string
     disciplineCode: string
     disciplineName: string
   } | null>(null)
@@ -225,7 +224,6 @@ function UploadsPage() {
     const titleParam = searchParams.get("title")
     const professorParam = searchParams.get("professor")
     const requestId = searchParams.get("requestId")
-    const requestUser = searchParams.get("requestUser")
     const disciplineName = searchParams.get("disciplineName")
 
     if (disciplineIdParam) setDisciplineId(disciplineIdParam)
@@ -233,11 +231,10 @@ function UploadsPage() {
     if (titleParam) setTitle(titleParam.slice(0, TITLE_MAX_LENGTH))
     if (professorParam) setProfessor(professorParam.slice(0, PROFESSOR_MAX_LENGTH))
 
-    if (requestId && requestUser && disciplineCodeParam && disciplineName) {
+    if (requestId && disciplineCodeParam && disciplineName) {
       setDescription("")
       setAttendingRequest({
         id: requestId,
-        user: requestUser,
         disciplineCode: disciplineCodeParam,
         disciplineName,
       })
@@ -280,7 +277,6 @@ function UploadsPage() {
         setProfessor((request.professor ?? "").slice(0, PROFESSOR_MAX_LENGTH))
         setAttendingRequest({
           id: request.id,
-          user: request.authorName,
           disciplineCode: request.disciplineCode,
           disciplineName: request.disciplineName,
         })
@@ -543,7 +539,7 @@ function UploadsPage() {
         <Alert className="bg-primary/10 border-primary/20">
           <UserCheck className="h-4 w-4 text-primary" />
           <AlertDescription className="text-primary">
-            Você está atendendo a solicitação de <strong>{attendingRequest.user}</strong> para{" "}
+            Você está atendendo a solicitação para{" "}
             <strong>{attendingRequest.disciplineCode}</strong> - {attendingRequest.disciplineName}
           </AlertDescription>
         </Alert>
