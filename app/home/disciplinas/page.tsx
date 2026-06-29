@@ -35,6 +35,7 @@ function DisciplinesPage() {
   const [error, setError] = useState<string | null>(null)
   const [disciplines, setDisciplines] = useState<DisciplineWithFavorite[]>([])
   const [totalDisciplines, setTotalDisciplines] = useState(0)
+  const [favoritesCount, setFavoritesCount] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageJumpInput, setPageJumpInput] = useState("")
 
@@ -49,6 +50,20 @@ function DisciplinesPage() {
   useEffect(() => {
     setCurrentPage(1)
   }, [debouncedSearchTerm, showFavoritesOnly, sortBy])
+
+  // Buscar a contagem total de disciplinas favoritadas (independente da paginação)
+  useEffect(() => {
+    const fetchFavoritesCount = async () => {
+      try {
+        const favorites = await disciplineService.getFavoriteDisciplines()
+        setFavoritesCount(favorites.length)
+      } catch (err) {
+        console.error("Erro ao carregar contagem de favoritos:", err)
+      }
+    }
+
+    fetchFavoritesCount()
+  }, [])
 
   // Buscar disciplinas do backend
   useEffect(() => {
@@ -146,10 +161,11 @@ function DisciplinesPage() {
           discipline.id === id ? { ...discipline, isFavorite: !currentIsFavorite } : discipline,
         ),
       )
-      
+      setFavoritesCount((prev) => (currentIsFavorite ? prev - 1 : prev + 1))
+
       // Chamar API
       await disciplineService.toggleFavorite(id, currentIsFavorite)
-      
+
       toast.success(currentIsFavorite ? "Removido dos favoritos" : "Adicionado aos favoritos")
     } catch (error) {
       // Reverter mudança em caso de erro
@@ -158,6 +174,7 @@ function DisciplinesPage() {
           discipline.id === id ? { ...discipline, isFavorite: currentIsFavorite } : discipline,
         ),
       )
+      setFavoritesCount((prev) => (currentIsFavorite ? prev + 1 : prev - 1))
       toast.error("Erro ao atualizar favorito")
       console.error(error)
     }
@@ -192,7 +209,7 @@ function DisciplinesPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Disciplinas Favoritadas</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-foreground">{disciplines.filter((d) => d.isFavorite).length}</p>
+            <p className="text-2xl font-bold text-foreground">{favoritesCount}</p>
           </CardContent>
         </Card>
         <Card>
