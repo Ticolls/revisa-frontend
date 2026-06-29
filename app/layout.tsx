@@ -33,7 +33,7 @@ export default function RootLayout({
             {children}
             <Analytics />
           </Suspense>
-          <Toaster position="top-right" richColors />
+          <Toaster position="bottom-right" richColors />
         </Providers>
       </body>
     </html>

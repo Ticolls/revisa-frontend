@@ -52,6 +52,7 @@ import { materialService } from "@/lib/api/services/material.service"
 import { disciplineService } from "@/lib/api/services/discipline.service"
 import { requestService } from "@/lib/api/services/request.service"
 import { toast } from "sonner"
+import { useGamification } from "@/lib/context/gamification-context"
 import { MaterialType } from "@/lib/api/types"
 import type { Material, Discipline, CreateMaterialRequest, UpdateMaterialRequest } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
@@ -89,6 +90,7 @@ function UploadsPage() {
   const [selectedGabarito, setSelectedGabarito] = useState<File | null>(null)
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { refresh: refreshGamification } = useGamification()
 
   const [disciplineId, setDisciplineId] = useState("")
   const [materialType, setMaterialType] = useState<MaterialType | "">("")
@@ -337,7 +339,9 @@ function UploadsPage() {
 
       toast.success("Material enviado com sucesso!")
       setShowSuccess(true)
-      
+      // Atualiza pontos/nível no header (com animação de ganho)
+      void refreshGamification()
+
       setDisciplineId("")
       setMaterialType("")
       setTitle("")

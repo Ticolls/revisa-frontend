@@ -2,6 +2,7 @@
 
 import { MobileNav } from "./mobile-nav"
 import { NotificationsPopover } from "./notifications-popover"
+import { GamificationHeader } from "./gamification-header"
 import { useAuth } from "@/lib/hooks/use-auth"
 
 export function DashboardHeader() {
@@ -22,7 +23,9 @@ export function DashboardHeader() {
         </div>
 
         {/* Right side */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <GamificationHeader />
+
           <NotificationsPopover />
 
           <div className="flex items-center gap-3">

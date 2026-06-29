@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { BarChart3, Users, BookOpen, FileText, MessageSquare, Flag, LogOut } from "lucide-react"
+import { BarChart3, Users, BookOpen, FileText, MessageSquare, Flag, LogOut, Trophy } from "lucide-react"
 import authService from "@/lib/api/services/auth.service"
 import { Button } from "../ui/button"
 import { useAuth } from "@/lib/hooks/use-auth"
@@ -14,6 +14,7 @@ const navigation = [
   { name: "Materiais", href: "/admin/materiais", icon: FileText },
   { name: "Solicitações", href: "/admin/solicitacoes", icon: MessageSquare },
   { name: "Denúncias", href: "/admin/denuncias", icon: Flag },
+  { name: "Gamificação", href: "/admin/gamificacao", icon: Trophy },
 ]
 
 export function AdminSidebar() {

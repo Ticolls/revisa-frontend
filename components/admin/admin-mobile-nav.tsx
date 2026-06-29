@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Menu, X, BarChart3, Users, BookOpen, FileText, MessageSquare, Flag, LogOut } from "lucide-react"
+import { Menu, X, BarChart3, Users, BookOpen, FileText, MessageSquare, Flag, LogOut, Trophy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import authService from "@/lib/api/services/auth.service"
 import { useAuth } from "@/lib/hooks/use-auth"
@@ -16,6 +16,7 @@ const navigation = [
   { name: "Materiais", href: "/admin/materiais", icon: FileText },
   { name: "Solicitações", href: "/admin/solicitacoes", icon: MessageSquare },
   { name: "Denúncias", href: "/admin/denuncias", icon: Flag },
+  { name: "Gamificação", href: "/admin/gamificacao", icon: Trophy },
 ]
 
 export function AdminMobileNav() {

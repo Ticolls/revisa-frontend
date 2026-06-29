@@ -124,3 +124,31 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Balanço do sino ao chegar uma nova notificação */
+@keyframes bell-swing {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  15% {
+    transform: rotate(13deg);
+  }
+  30% {
+    transform: rotate(-11deg);
+  }
+  45% {
+    transform: rotate(7deg);
+  }
+  60% {
+    transform: rotate(-5deg);
+  }
+  75% {
+    transform: rotate(3deg);
+  }
+}
+
+.animate-bell-swing {
+  animation: bell-swing 0.9s ease-in-out;
+  transform-origin: top center;
+}

@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
-import { Bell, CheckCheck, FileText, Upload, BookOpen, Trash2 } from "lucide-react"
+import { Bell, CheckCheck, FileText, Upload, BookOpen, Trash2, Trophy } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { useNotificationContext } from "@/lib/context/notification-context"
@@ -20,6 +20,8 @@ const getNotificationIcon = (type: string) => {
       return <FileText className="h-5 w-5 text-blue-500" />
     case "NEW_MATERIAL":
       return <Upload className="h-5 w-5 text-purple-500" />
+    case "ACHIEVEMENT_UNLOCKED":
+      return <Trophy className="h-5 w-5 text-amber-500" />
     default:
       return <Bell className="h-5 w-5 text-muted-foreground" />
   }
@@ -35,6 +37,8 @@ const getNotificationLink = (type: string, data?: any) => {
       return "/home/solicitacoes"
     case "NEW_MATERIAL":
       return data.disciplineId ? `/home/disciplinas/${data.disciplineId}` : "/home"
+    case "ACHIEVEMENT_UNLOCKED":
+      return "/home/perfil"
     default:
       return "/home"
   }
@@ -52,6 +56,19 @@ export function NotificationsPopover() {
     markAllAsRead,
     deleteNotification,
   } = useNotificationContext()
+
+  // Balança o sino quando chega uma nova notificação (unreadCount aumenta).
+  const [ringing, setRinging] = useState(false)
+  const prevUnread = useRef(unreadCount)
+  useEffect(() => {
+    if (unreadCount > prevUnread.current) {
+      setRinging(true)
+      const t = setTimeout(() => setRinging(false), 900)
+      prevUnread.current = unreadCount
+      return () => clearTimeout(t)
+    }
+    prevUnread.current = unreadCount
+  }, [unreadCount])
 
   const handleNotificationClick = async (notification: any) => {
     try {
@@ -92,9 +109,13 @@ export function NotificationsPopover() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative cursor-pointer">
-          <Bell className="h-5 w-5" />
+          <Bell className={`h-5 w-5 ${ringing ? "animate-bell-swing text-primary" : ""}`} />
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
+            <span
+              className={`absolute top-1 right-1 w-2 h-2 bg-primary rounded-full transition-all ${
+                ringing ? "ring-2 ring-primary/40 scale-125" : ""
+              }`}
+            />
           )}
         </Button>
       </PopoverTrigger>

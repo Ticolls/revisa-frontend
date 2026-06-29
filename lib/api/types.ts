@@ -314,3 +314,85 @@ export type RequestInterceptor = (
 export type ResponseInterceptor = (response: Response) => Response | Promise<Response>
 
 export type ErrorInterceptor = (error: ApiError) => void | Promise<void>
+
+// ----------------------------------------------------------------------------
+// Gamificação
+// ----------------------------------------------------------------------------
+
+export type BadgeMetric =
+  | "UPLOADS"
+  | "REQUESTS_FULFILLED"
+  | "DOWNLOADS_RECEIVED"
+  | "MAX_UPLOADS_IN_DISCIPLINE"
+
+export interface GamificationLevel {
+  name: string
+  minPoints: number
+  next: { name: string; minPoints: number } | null
+  progress: number
+  pointsToNext: number
+}
+
+export interface GamificationBadge {
+  key: string
+  title: string
+  description: string
+  iconUrl: string | null
+  metric: BadgeMetric
+  threshold: number
+  earned: boolean
+  earnedAt: string | null
+  progress: { current: number; target: number }
+}
+
+export interface GamificationStats {
+  uploads: number
+  requestsFulfilled: number
+  downloadsReceived: number
+  maxUploadsInDiscipline: number
+  points: number
+}
+
+export interface GamificationProfile {
+  stats: GamificationStats
+  level: GamificationLevel
+  badges: GamificationBadge[]
+}
+
+// Admin
+export interface AdminUserGamification {
+  id: string
+  name: string
+  email: string
+  points: number
+  level: string
+  uploads: number
+  requestsFulfilled: number
+  downloadsReceived: number
+  badgeCount: number
+}
+
+export interface BadgeDefinition {
+  id: string
+  key: string
+  title: string
+  description: string
+  iconUrl: string | null
+  metric: BadgeMetric
+  threshold: number
+  active: boolean
+  order: number
+}
+
+export interface LevelTier {
+  name: string
+  minPoints: number
+}
+
+export interface GamificationConfig {
+  id: string
+  pointsPerUpload: number
+  pointsPerFulfillment: number
+  pointsPerDownloadReceived: number
+  levelTiers: LevelTier[]
+}

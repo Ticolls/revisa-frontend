@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, BookOpen, FileQuestion, Upload, LogOut, Settings } from "lucide-react"
+import { Home, BookOpen, FileQuestion, Upload, LogOut, Settings, Trophy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { authService } from "@/lib/api/services/auth.service"
 import { useRouter } from "next/navigation"
@@ -13,6 +13,7 @@ const navigation = [
   { name: "Disciplinas", href: "/home/disciplinas", icon: BookOpen },
   { name: "Solicitações", href: "/home/solicitacoes", icon: FileQuestion },
   { name: "Uploads", href: "/home/uploads", icon: Upload },
+  { name: "Meu Perfil", href: "/home/perfil", icon: Trophy },
   { name: "Configurações", href: "/home/configuracoes", icon: Settings },
 ]
 
